@@ -1,14 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { UploadCloud02, FileDownload02, Settings01, HelpCircle } from "@untitledui/icons";
+import { UploadCloud02, HelpCircle } from "@untitledui/icons";
 import { NavItemButton } from "@/components/application/app-navigation/base-components/nav-item-button";
 
 import { cx } from "@/utils/cx";
 import type { DocumentType } from "@/types/documents";
 import { useInvoiceCounts } from "@/lib/airtable";
 import { useFileCounts } from "@/lib/airtable/files-hooks";
-import { useEmailCounts } from "@/lib/airtable/emails-hooks";
 
 
 export default function AppLayout({
@@ -19,22 +18,17 @@ export default function AppLayout({
     // Get counts from Airtable
     const { counts: invoiceCounts, loading: invoiceCountsLoading } = useInvoiceCounts();
     const { counts: fileCounts, loading: fileCountsLoading } = useFileCounts();
-    const { counts: emailCounts, loading: emailCountsLoading } = useEmailCounts();
     
     const documentTypes = [
         { id: 'invoices', label: 'Invoices', badge: invoiceCountsLoading ? '...' : (invoiceCounts.total || 0) },
         { id: 'store-receivers', label: 'Store Receivers', badge: 5 }, // TODO: Implement counts when store receivers integration is added
         { id: 'delivery-tickets', label: 'Delivery Tickets', badge: 12 }, // TODO: Implement counts when delivery tickets integration is added
-        { id: 'emails', label: 'Emails', badge: emailCountsLoading ? '...' : (emailCounts.total || 0) },
         { id: 'files', label: 'Files', badge: fileCountsLoading ? '...' : (fileCounts.total || 0) },
     ];
     const pathname = usePathname();
     const router = useRouter();
     
     const isCurrentPath = (href: string) => {
-        if (href === "/export") {
-            return pathname.startsWith("/export");
-        }
         if (href === "/upload") {
             return pathname === "/upload";
         }
@@ -59,7 +53,7 @@ export default function AppLayout({
         <div className="flex flex-col h-screen bg-primary">
 
             {/* Document Type Navigation */}
-            <div className="sticky top-0 z-50 border-b border-secondary bg-primary px-6 pt-4 flex-shrink-0">
+            <div className="sticky top-0 z-50 border-b border-secondary bg-primary px-6 flex-shrink-0">
                     <div className="flex items-center justify-between relative">
                         <div className="flex items-center gap-6">
                             {/* Primary Document Types */}
@@ -69,7 +63,7 @@ export default function AppLayout({
                                         key={item.id}
                                         onClick={() => handleDocumentTypeChange(item.id as DocumentType)}
                                         className={cx(
-                                            "flex items-center gap-2 text-md font-semibold px-1 pt-2.5 pb-1 rounded-none border-b-2 border-transparent transition duration-100 ease-linear",
+                                            "flex items-center gap-2 text-md font-semibold px-1 pt-4 pb-3 rounded-none border-b-2 border-transparent transition duration-100 ease-linear",
                                             currentDocumentType === item.id 
                                                 ? "border-fg-brand-primary_alt text-brand-secondary" 
                                                 : "text-quaternary hover:border-fg-brand-primary_alt hover:text-brand-secondary"
@@ -95,7 +89,7 @@ export default function AppLayout({
                                         key={item.id}
                                         onClick={() => handleDocumentTypeChange(item.id as DocumentType)}
                                         className={cx(
-                                            "flex items-center gap-2 text-md font-semibold px-1 pt-2.5 pb-1 rounded-none border-b-2 border-transparent transition duration-100 ease-linear",
+                                            "flex items-center gap-2 text-md font-semibold px-1 pt-4 pb-3 rounded-none border-b-2 border-transparent transition duration-100 ease-linear",
                                             currentDocumentType === item.id 
                                                 ? "border-fg-brand-primary_alt text-brand-secondary" 
                                                 : "text-quaternary hover:border-fg-brand-primary_alt hover:text-brand-secondary"
@@ -120,21 +114,6 @@ export default function AppLayout({
                                 label="Upload Files" 
                                 href="/upload" 
                                 current={isCurrentPath("/upload")}
-                                tooltipPlacement="bottom" 
-                            />
-                            <NavItemButton 
-                                size="md" 
-                                icon={FileDownload02} 
-                                label="Export" 
-                                href="/export" 
-                                current={isCurrentPath("/export")}
-                                tooltipPlacement="bottom" 
-                            />
-                            <NavItemButton 
-                                size="md" 
-                                icon={Settings01} 
-                                label="Settings" 
-                                href="#" 
                                 tooltipPlacement="bottom" 
                             />
                             <NavItemButton 

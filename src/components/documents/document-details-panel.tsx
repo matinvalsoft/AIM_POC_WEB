@@ -278,7 +278,7 @@ export const DocumentDetailsPanel = ({
                             onClick={() => onSendForApproval?.(currentDoc)}
                             isDisabled={!validation.canMarkAsReviewed}
                         >
-                            Send for Approval
+                            Mark as Reviewed
                         </Button>
                         <Button 
                             size="sm" 
@@ -330,7 +330,7 @@ export const DocumentDetailsPanel = ({
                             className="flex-1"
                             onClick={() => onResendForApproval?.(currentDoc)}
                         >
-                            Resend for Approval
+                            Re-mark as Reviewed
                         </Button>
                         <Button 
                             size="sm" 

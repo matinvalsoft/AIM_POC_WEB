@@ -113,10 +113,10 @@ export default function InvoicesPage() {
                 oldStatus,
                 'pending',
                 'User', // TODO: Get actual user info
-                'Invoice sent for approval'
+                'Invoice marked as reviewed'
             );
         } catch (err) {
-            console.error('Failed to send for approval:', err);
+            console.error('Failed to mark as reviewed:', err);
         }
     };
 
@@ -170,10 +170,10 @@ export default function InvoicesPage() {
                 oldStatus,
                 'pending',
                 'User', // TODO: Get actual user info
-                'Invoice resent for approval'
+                'Invoice re-marked as reviewed'
             );
         } catch (err) {
-            console.error('Failed to resend for approval:', err);
+            console.error('Failed to re-mark as reviewed:', err);
         }
     };
 
