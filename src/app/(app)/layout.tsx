@@ -63,18 +63,13 @@ export default function AppLayout({
                                         key={item.id}
                                         onClick={() => handleDocumentTypeChange(item.id as DocumentType)}
                                         className={cx(
-                                            "flex items-center gap-2 text-md font-semibold px-1 pt-4 pb-3 rounded-none border-b-2 border-transparent transition duration-100 ease-linear",
+                                            "flex items-center gap-2 text-md font-semibold px-1 pt-4 pb-3 rounded-none border-b-2 border-transparent transition duration-100 ease-linear cursor-pointer",
                                             currentDocumentType === item.id 
                                                 ? "border-fg-brand-primary_alt text-brand-secondary" 
                                                 : "text-quaternary hover:border-fg-brand-primary_alt hover:text-brand-secondary"
                                         )}
                                     >
                                         {item.label}
-                                        {item.badge && (
-                                            <span className="hidden md:flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                                                {item.badge}
-                                            </span>
-                                        )}
                                     </button>
                                 ))}
                             </div>
@@ -89,18 +84,13 @@ export default function AppLayout({
                                         key={item.id}
                                         onClick={() => handleDocumentTypeChange(item.id as DocumentType)}
                                         className={cx(
-                                            "flex items-center gap-2 text-md font-semibold px-1 pt-4 pb-3 rounded-none border-b-2 border-transparent transition duration-100 ease-linear",
+                                            "flex items-center gap-2 text-md font-semibold px-1 pt-4 pb-3 rounded-none border-b-2 border-transparent transition duration-100 ease-linear cursor-pointer",
                                             currentDocumentType === item.id 
                                                 ? "border-fg-brand-primary_alt text-brand-secondary" 
                                                 : "text-quaternary hover:border-fg-brand-primary_alt hover:text-brand-secondary"
                                         )}
                                     >
                                         {item.label}
-                                        {item.badge && (
-                                            <span className="hidden md:flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
-                                                {item.badge}
-                                            </span>
-                                        )}
                                     </button>
                                 ))}
                             </div>

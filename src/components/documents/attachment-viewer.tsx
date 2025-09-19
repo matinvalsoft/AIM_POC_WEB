@@ -260,7 +260,7 @@ export const AttachmentViewer = ({ attachments, className, maxHeight = "h-full" 
 
   return (
     <div className={cx("flex flex-col", maxHeight, className)}>
-      {/* Attachment List - Only show if multiple attachments */}
+      {/* Attachment List - Only show if multiple attachments, hidden for single PDFs */}
       {attachments.length > 1 && (
         <div className="border-b border-gray-200 p-4 bg-gray-50">
           <h4 className="text-sm font-medium text-gray-900 mb-3">
@@ -279,37 +279,7 @@ export const AttachmentViewer = ({ attachments, className, maxHeight = "h-full" 
         </div>
       )}
 
-      {/* Single attachment info */}
-      {attachments.length === 1 && (
-        <div className="border-b border-gray-200 p-4 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-medium text-gray-900">{selectedAttachment.filename}</h4>
-              <p className="text-xs text-gray-500">
-                {(selectedAttachment.size / 1024 / 1024).toFixed(2)} MB • {selectedAttachment.type}
-              </p>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                color="secondary"
-                iconLeading={FileDownload02}
-                onClick={() => window.open(selectedAttachment.url, '_blank')}
-                aria-label="Download attachment"
-              />
-              <Button
-                size="sm"
-                color="secondary"
-                iconLeading={LinkExternal01}
-                onClick={() => window.open(selectedAttachment.url, '_blank')}
-                aria-label="Open in new tab"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Attachment Preview */}
+      {/* Attachment Preview - No custom header for single attachments */}
       <div className="flex-1 overflow-hidden">
         <AttachmentPreview attachment={selectedAttachment} />
       </div>
