@@ -50,18 +50,20 @@ export function validateLineTotals(invoice: Invoice): ValidationIssue | null {
  */
 export function getRequiredFields(invoice: Invoice): Array<{key: string, label: string, value: any}> {
     const baseFields = [
-        { key: 'vendorName', label: 'Vendor', value: invoice.vendorName },
+        { key: 'vendorName', label: 'Vendor Name', value: invoice.vendorName },
+        { key: 'vendorCode', label: 'Vendor Code', value: invoice.vendorCode },
         { key: 'invoiceNumber', label: 'Invoice #', value: invoice.invoiceNumber },
         { key: 'invoiceDate', label: 'Invoice Date', value: invoice.invoiceDate },
         { key: 'amount', label: 'Amount', value: invoice.amount },
+        { key: 'storeNumber', label: 'Store Number', value: invoice.storeNumber },
     ];
 
-    // In single-line mode, also require coding fields
-    if (!isMultiLineMode(invoice)) {
-        baseFields.push(
-            { key: 'glAccount', label: 'GL Account', value: invoice.glAccount || '' }
-        );
-    }
+    // GL Account is no longer required per new requirements
+    // if (!isMultiLineMode(invoice)) {
+    //     baseFields.push(
+    //         { key: 'glAccount', label: 'GL Account', value: invoice.glAccount || '' }
+    //     );
+    // }
 
     return baseFields;
 }
@@ -87,15 +89,8 @@ export function validateRequiredFields(invoice: Invoice): ValidationIssue[] {
 export function getAdvisoryIssues(invoice: Invoice): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
 
-    // Vendor code is advisory only
-    if (!invoice.vendorCode) {
-        issues.push({
-            type: 'advisory',
-            field: 'vendorCode',
-            message: 'Vendor Code is missing (can be backfilled from master data)',
-            blocking: false
-        });
-    }
+    // No advisory issues currently defined
+    // Vendor code is now a required field
 
     return issues;
 }

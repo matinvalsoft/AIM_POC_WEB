@@ -10,7 +10,7 @@ import { logStatusChange, logFieldEdit } from "@/lib/airtable/activity-logger";
 import { useKeyboardNavigation } from "@/hooks/use-keyboard-navigation";
 import { KeyboardShortcutsHelp } from "@/components/keyboard-shortcuts-help";
 import { cx } from "@/utils/cx";
-import { hasBlockingIssues, sortInvoicesByPriority } from "@/utils/invoice-validation";
+import { hasBlockingIssues, sortInvoicesByPriority, validateInvoice, getMissingFieldsMessage } from "@/utils/invoice-validation";
 import type { Invoice } from "@/types/documents";
 
 export default function InvoicesPage() {
@@ -130,15 +130,23 @@ export default function InvoicesPage() {
     // Status change handlers
     const handleSendForApproval = async (invoice: Invoice) => {
         try {
+            // Validate required fields before marking as reviewed
+            const validation = validateInvoice(invoice);
+            if (!validation.canMarkAsReviewed) {
+                const missingFieldsMessage = getMissingFieldsMessage(invoice);
+                alert(`Cannot mark as reviewed. ${missingFieldsMessage}`);
+                return;
+            }
+
             const oldStatus = invoice.status;
-            await updateInvoice(invoice.id, { status: 'pending' });
+            await updateInvoice(invoice.id, { status: 'reviewed' });
             
             // Log the activity
             await logStatusChange(
                 invoice.id,
                 invoice.invoiceNumber,
                 oldStatus,
-                'pending',
+                'reviewed',
                 'User', // TODO: Get actual user info
                 'Invoice marked as reviewed'
             );
