@@ -157,6 +157,7 @@ export * from './config';
 export * from './hooks';
 export * from './transforms';
 export * from './invoice-hooks';
+export * from './teams-hooks';
 export * from './activity-hooks';
 export * from './utils';
 export * from './activity-logger';

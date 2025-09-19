@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import type { Key } from "react";
 import { parseDate, getLocalTimeZone } from "@internationalized/date";
 import { Tabs, TabList, Tab, TabPanel } from "@/components/application/tabs/tabs";
 import { Input } from "@/components/base/input/input";
@@ -15,7 +16,7 @@ import { AlertTriangle, CheckCircle, Clock, User01, LinkExternal01, Trash01, Cop
 import { cx } from "@/utils/cx";
 import { InvoiceCodingInterface } from "@/components/documents/invoice-coding-interface";
 import { LinksTab, RawContentTab, ActivityTimeline } from "@/components/documents/shared-tabs";
-import { useActivities } from "@/lib/airtable";
+import { useActivities, useTeams } from "@/lib/airtable";
 import { useInvoiceLinks } from "@/lib/airtable/linked-documents-hooks";
 import type { Invoice, DocumentLink } from "@/types/documents";
 import { INVOICE_STATUS } from "@/lib/airtable/schema-types";
@@ -131,6 +132,9 @@ export const DocumentDetailsPanel = ({
 
     // Fetch linked documents (files and emails) for the current document
     const { linkedItems, files, emails, loading: linkedDocsLoading, error: linkedDocsError } = useInvoiceLinks(document?.id);
+
+    // Fetch teams data for store number dropdown
+    const { teams, loading: teamsLoading, error: teamsError } = useTeams();
 
     // Keep panel state in sync with selected document
     useEffect(() => {
@@ -462,6 +466,29 @@ export const DocumentDetailsPanel = ({
         return currentDoc ? validateInvoice(currentDoc) : { canMarkAsReviewed: false, isValid: false, issues: [] };
     }, [currentDoc]);
 
+    // Transform teams data for the store number dropdown
+    const teamsSelectItems = useMemo(() => {
+        return teams.map(team => ({
+            id: team.id, // Use Airtable record ID for unique keys
+            label: team.fullName ? `${team.name} - ${team.fullName}` : team.name // Team name with dash and full name
+        }));
+    }, [teams]);
+
+    // Find the selected team ID based on the current team field (array of team IDs)
+    const selectedTeamId = useMemo(() => {
+        // team is an array of team record IDs, get the first one
+        const teamId = currentDoc?.team?.[0];
+        return teamId || null;
+    }, [currentDoc?.team]);
+
+    // Handle team selection - update team field with selected team ID
+    const handleTeamSelection = (key: Key | null) => {
+        if (key) {
+            // Update the team field with an array containing the selected team ID
+            updateField('team', [key as string]);
+        }
+    };
+
     if (!document) {
         return (
             <div className={cx("w-full max-w-sm border-l border-secondary bg-primary", className)}>
@@ -530,27 +557,16 @@ export const DocumentDetailsPanel = ({
                             <div>
                                 <label className="text-xs font-medium text-tertiary mb-1 block">Store Number</label>
                                 <Select
-                                    placeholder="Select store"
-                                    items={[
-                                        { id: "1", label: "Store 1", supportingText: "Main Location" },
-                                        { id: "2", label: "Store 2", supportingText: "North Branch" },
-                                        { id: "3", label: "Store 3", supportingText: "South Branch" },
-                                        { id: "4", label: "Store 4", supportingText: "East Branch" },
-                                        { id: "5", label: "Store 5", supportingText: "West Branch" },
-                                        { id: "6", label: "Store 6", supportingText: "Downtown" },
-                                        { id: "7", label: "Store 7", supportingText: "Uptown" },
-                                        { id: "8", label: "Store 8", supportingText: "Midtown" },
-                                        { id: "9", label: "Store 9", supportingText: "Westside" },
-                                        { id: "10", label: "Store 10", supportingText: "Eastside" }
-                                    ]}
-                                    selectedKey={currentDoc?.storeNumber}
-                                    onSelectionChange={(key) => updateField('storeNumber', key as string)}
+                                    placeholder={teamsLoading ? "Loading teams..." : "Select store"}
+                                    items={teamsSelectItems}
+                                    selectedKey={selectedTeamId}
+                                    onSelectionChange={handleTeamSelection}
                                     size="sm"
-                                    isDisabled={!canEdit}
+                                    isDisabled={!canEdit || teamsLoading}
                                 >
                                     {(item) => (
-                                        <Select.Item key={item.id} id={item.id} supportingText={item.supportingText}>
-                                            {item.label}
+                                        <Select.Item key={item.id} id={item.id}>
+                                            <span className="font-normal">{item.label}</span>
                                         </Select.Item>
                                     )}
                                 </Select>
