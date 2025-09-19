@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createAirtableClient, buildFilter, filters } from './index';
 import type { AirtableAttachment } from './types';
 
-const BASE_ID = 'appUKa7frdeLLPBr4';
+const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || 'applERrhATK0OQtqg';
 
 // Types that match the Airtable Files table schema
 export interface AirtableFile {
@@ -85,15 +85,15 @@ function transformAirtableRecord(record: any): AirtableFile {
         source: record.fields['Source'] || 'Upload',
         status: record.fields['Status'] || 'Queued',
         pages: record.fields['Pages'] || undefined,
-        isDuplicate: record.fields['Is Duplicate'] || false,
-        duplicateOf: record.fields['Duplicate Of'] || [],
+        isDuplicate: false, // Field was removed in schema v2.0.0
+        duplicateOf: record.fields['Error Code'] || '', // Renamed from 'Duplicate Of'
         relatedInvoices,
         activity: record.fields['Activity'] || [],
         relatedEmails,
         attachments: record.fields['Attachments'] || [], // File attachments from Airtable
         isLinked,
         createdAt: record.createdTime ? new Date(record.createdTime) : undefined,
-        updatedAt: record.fields['Last Modified'] ? new Date(record.fields['Last Modified']) : undefined,
+        updatedAt: record.fields['Modified At'] ? new Date(record.fields['Modified At']) : undefined,
     };
 }
 

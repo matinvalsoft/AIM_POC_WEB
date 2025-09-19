@@ -9,7 +9,7 @@ import { transformAirtableToInvoice, transformInvoiceToAirtable } from './transf
 import type { Invoice } from '@/types/documents';
 import type { AirtableRecord } from './types';
 
-const BASE_ID = 'appUKa7frdeLLPBr4';
+const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || 'applERrhATK0OQtqg';
 
 interface UseInvoicesOptions {
   filter?: string;
@@ -267,12 +267,13 @@ export function useInvoiceCounts() {
       const total = data.records.length;
       const needsCoding = data.records.filter((record: AirtableRecord) => {
         const fields = record.fields;
-        return !fields.Project || !fields.Task || !fields['Cost Center'] || !fields['GL Account'];
+        return !fields['ERP Attribute 1'] || !fields['ERP Attribute 2'] || !fields['ERP Attribute 3'] || !fields['GL Account'];
       }).length;
 
       setCounts({
         total,
         open: statusCounts.open || 0,
+        reviewed: statusCounts.reviewed || 0, // NEW status
         pending: statusCounts.pending || 0,
         approved: statusCounts.approved || 0,
         rejected: statusCounts.rejected || 0,

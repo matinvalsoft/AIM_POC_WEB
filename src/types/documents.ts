@@ -1,9 +1,21 @@
 import type { AirtableAttachment } from '@/lib/airtable/types';
+import type { 
+  InvoiceStatus, 
+  FileStatus, 
+  ActivityType,
+  INVOICE_STATUS,
+  FILE_STATUS,
+  ACTIVITY_TYPE 
+} from '@/lib/airtable/schema-types';
 
 // Document Types
 export type DocumentType = 'invoices' | 'files' | 'emails' | 'store-receivers' | 'delivery-tickets';
 
-export type DocumentStatus = 'open' | 'pending' | 'approved' | 'rejected' | 'exported';
+// Use the actual Airtable schema statuses
+export type DocumentStatus = InvoiceStatus;
+
+// Export the schema constants for use in components
+export { INVOICE_STATUS, FILE_STATUS, ACTIVITY_TYPE };
 
 // Completeness is computed on the fly in UI; keeping type for legacy references if any
 export type CompletenessStatus = 'complete' | 'incomplete' | 'missing_fields';
@@ -48,18 +60,24 @@ export interface Invoice extends BaseDocument {
     amount: number;
     // Coding mode control
     isMultilineCoding: boolean; // Controls whether to use invoice-level or line-level coding
+    // ERP attributes (previously project/task/cost center)
+    erpAttribute1?: string; // Previously "project"
+    erpAttribute2?: string; // Previously "task"
+    erpAttribute3?: string; // Previously "cost center"
     // Invoice-level coding fields (ignored when isMultilineCoding = true, but preserved)
     glAccount?: string; // 6-digit
     // Document processing
     rawTextOcr?: string; // OCR extracted text from original document
-    // Rejection reason (only present when status is 'rejected')
-    rejectionReason?: string;
+    // Rejection tracking
+    rejectionCode?: string; // Structured rejection code
+    rejectionReason?: string; // Human-readable rejection reason
     // Email attachments from linked emails (multipleLookupValues)
     attachments?: AirtableAttachment[];
     // Additional fields from schema
     storeNumber?: string; // Store identifier for multi-location businesses
     files?: string[]; // Links to file records
     emails?: string[]; // Links to email records
+    team?: string[]; // Links to team records (NEW)
 }
 
 // Purchase Order Document
@@ -149,6 +167,11 @@ export const INVOICE_SUB_VIEWS: DocumentSubView[] = [
         id: 'open',
         label: 'Open',
         filter: (docs: Document[]) => docs.filter(doc => doc.status === 'open')
+    },
+    {
+        id: 'reviewed',
+        label: 'Reviewed',
+        filter: (docs: Document[]) => docs.filter(doc => doc.status === 'reviewed')
     },
     {
         id: 'pending',

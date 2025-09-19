@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CompactInvoiceList } from "@/components/documents/compact-invoice-list";
 import { PDFViewer } from "@/components/documents/pdf-viewer";
 import { DocumentDetailsPanel } from "@/components/documents/document-details-panel";
@@ -13,6 +14,9 @@ import { hasBlockingIssues, sortInvoicesByPriority } from "@/utils/invoice-valid
 import type { Invoice } from "@/types/documents";
 
 export default function InvoicesPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    
     const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
     const [subView, setSubView] = useState('all');
     const [activeTab, setActiveTab] = useState('extracted');
@@ -21,6 +25,29 @@ export default function InvoicesPage() {
     const { invoices, loading, error, updateInvoice } = useInvoices({
         autoFetch: true
     });
+
+    // Sync URL with selectedInvoiceId
+    useEffect(() => {
+        const urlInvoiceId = searchParams.get('id');
+        if (urlInvoiceId && urlInvoiceId !== selectedInvoiceId) {
+            setSelectedInvoiceId(urlInvoiceId);
+        }
+    }, [searchParams, selectedInvoiceId]);
+
+    // Update URL when selectedInvoiceId changes
+    const updateSelectedInvoiceId = (invoiceId: string) => {
+        setSelectedInvoiceId(invoiceId);
+        
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        if (invoiceId) {
+            newSearchParams.set('id', invoiceId);
+        } else {
+            newSearchParams.delete('id');
+        }
+        
+        const newUrl = `/invoices?${newSearchParams.toString()}`;
+        router.replace(newUrl, { scroll: false });
+    };
 
     const selectedInvoice = invoices.find(inv => inv.id === selectedInvoiceId);
 
@@ -51,7 +78,7 @@ export default function InvoicesPage() {
     const keyboardNav = useKeyboardNavigation({
         invoices: filteredInvoices,
         selectedInvoiceId,
-        onSelectionChange: setSelectedInvoiceId,
+        onSelectionChange: updateSelectedInvoiceId,
         activeTab,
         onTabChange: setActiveTab,
         onSave: handleKeyboardSave,
@@ -60,7 +87,7 @@ export default function InvoicesPage() {
     // Set initial selection when invoices load - use filtered invoices
     useEffect(() => {
         if (filteredInvoices.length > 0 && !selectedInvoiceId) {
-            setSelectedInvoiceId(filteredInvoices[0].id);
+            updateSelectedInvoiceId(filteredInvoices[0].id);
         }
     }, [filteredInvoices, selectedInvoiceId]);
 
@@ -244,7 +271,7 @@ export default function InvoicesPage() {
                     invoices={invoices}
                     filteredInvoices={filteredInvoices}
                     selectedInvoiceId={selectedInvoiceId}
-                    onSelectionChange={setSelectedInvoiceId}
+                    onSelectionChange={updateSelectedInvoiceId}
                     subView={subView}
                     onSubViewChange={setSubView}
                     keyboardNav={keyboardNav}

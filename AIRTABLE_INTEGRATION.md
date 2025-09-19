@@ -15,6 +15,12 @@ This is a complete, production-ready Airtable integration for Next.js applicatio
 ✅ **OAuth ready** - Multi-tenant support  
 ✅ **Server-side only** - All secrets kept secure  
 
+## Documentation
+
+- **[Schema Documentation](./AIRTABLE_SCHEMA.md)** - Complete database schema reference
+- **[Setup Guide](./AIRTABLE_SETUP.md)** - Environment configuration walkthrough  
+- **[Implementation Details](./AIRTABLE_IMPLEMENTATION.md)** - Technical implementation notes
+
 ## Quick Start
 
 ### 1. Environment Setup

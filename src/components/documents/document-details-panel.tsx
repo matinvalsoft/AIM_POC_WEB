@@ -18,6 +18,7 @@ import { LinksTab, RawContentTab, ActivityTimeline } from "@/components/document
 import { useActivities } from "@/lib/airtable";
 import { useInvoiceLinks } from "@/lib/airtable/linked-documents-hooks";
 import type { Invoice, DocumentLink } from "@/types/documents";
+import { INVOICE_STATUS } from "@/lib/airtable/schema-types";
 import { validateInvoice, getMissingFieldsMessage, isMultiLineMode } from "@/utils/invoice-validation";
 
 
@@ -69,7 +70,7 @@ const CompletenessChecker = ({ document }: { document?: Invoice }) => {
 };
 
 const RejectionReasonBanner = ({ document }: { document?: Invoice }) => {
-    if (!document || document.status !== 'rejected' || !document.rejectionReason) {
+    if (!document || document.status !== INVOICE_STATUS.REJECTED || !document.rejectionReason) {
         return null;
     }
 
@@ -472,7 +473,7 @@ export const DocumentDetailsPanel = ({
             </div>
         );
     }
-    const canEdit = currentDoc?.status === 'open' || currentDoc?.status === 'rejected';
+    const canEdit = currentDoc?.status === INVOICE_STATUS.OPEN || currentDoc?.status === INVOICE_STATUS.REJECTED;
 
     return (
         <div ref={panelRef} className={cx("w-full max-w-sm border-l border-secondary bg-primary flex flex-col h-full overflow-hidden", className)}>

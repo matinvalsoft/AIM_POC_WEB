@@ -9,11 +9,12 @@ import { Dropdown } from "@/components/base/dropdown/dropdown";
 import { ButtonUtility } from "@/components/base/buttons/button-utility";
 import { cx } from "@/utils/cx";
 import type { AirtableFile } from "@/lib/airtable/files-hooks";
+import { FILE_STATUS } from "@/lib/airtable/schema-types";
 
 // Helper function to check if a file has blocking issues
 const hasBlockingIssues = (file: AirtableFile) => {
     // Files need attention if they're in attention state or are duplicates
-    return file.status === 'Attention' || file.isDuplicate;
+    return file.status === FILE_STATUS.ATTENTION || file.isDuplicate;
 };
 
 interface CompactFilesListProps {
@@ -143,10 +144,10 @@ export const CompactFilesList = ({
     const subViews = [
         { id: 'all', label: 'All', count: files.length },
         { id: 'needs_attention', label: 'Needs Attention', count: files.filter(file => hasBlockingIssues(file)).length },
-        { id: 'queued', label: 'Queued', count: files.filter(file => file.status === 'Queued').length },
-        { id: 'processing', label: 'Processing', count: files.filter(file => file.status === 'Processing').length },
-        { id: 'processed', label: 'Processed', count: files.filter(file => file.status === 'Processed').length },
-        { id: 'error', label: 'Error', count: files.filter(file => file.status === 'Error').length },
+        { id: 'queued', label: 'Queued', count: files.filter(file => file.status === FILE_STATUS.QUEUED).length },
+        { id: 'processing', label: 'Processing', count: files.filter(file => file.status === FILE_STATUS.PROCESSING).length },
+        { id: 'processed', label: 'Processed', count: files.filter(file => file.status === FILE_STATUS.PROCESSED).length },
+        { id: 'attention', label: 'Attention', count: files.filter(file => file.status === FILE_STATUS.ATTENTION).length },
         { id: 'linked', label: 'Linked', count: files.filter(file => file.isLinked).length },
         { id: 'duplicates', label: 'Duplicates', count: files.filter(file => file.isDuplicate).length },
     ];
@@ -157,10 +158,10 @@ export const CompactFilesList = ({
             // Apply sub-view filter
             switch (subView) {
                 case 'needs_attention': return hasBlockingIssues(file);
-                case 'queued': return file.status === 'Queued';
-                case 'processing': return file.status === 'Processing';
-                case 'processed': return file.status === 'Processed';
-                case 'error': return file.status === 'Error';
+                case 'queued': return file.status === FILE_STATUS.QUEUED;
+                case 'processing': return file.status === FILE_STATUS.PROCESSING;
+                case 'processed': return file.status === FILE_STATUS.PROCESSED;
+                case 'attention': return file.status === FILE_STATUS.ATTENTION;
                 case 'linked': return file.isLinked;
                 case 'duplicates': return file.isDuplicate;
                 default: return true;
@@ -174,8 +175,8 @@ export const CompactFilesList = ({
             if (aHasIssues && !bHasIssues) return -1;
             if (!aHasIssues && bHasIssues) return 1;
             
-            // Then by status priority (Error -> Attention -> Processing -> Queued -> Processed)
-            const statusPriority = { 'Error': 5, 'Attention': 4, 'Processing': 3, 'Queued': 2, 'Processed': 1 };
+            // Then by status priority (Attention -> Processing -> Queued -> Processed)
+            const statusPriority = { [FILE_STATUS.ATTENTION]: 4, [FILE_STATUS.PROCESSING]: 3, [FILE_STATUS.QUEUED]: 2, [FILE_STATUS.PROCESSED]: 1 };
             const aPriority = statusPriority[a.status] || 0;
             const bPriority = statusPriority[b.status] || 0;
             

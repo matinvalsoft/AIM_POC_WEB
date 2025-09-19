@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createAirtableClient, buildFilter, filters } from './index';
 import type { AirtableAttachment } from './types';
 
-const BASE_ID = 'appUKa7frdeLLPBr4';
+const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || 'applERrhATK0OQtqg';
 
 // Types that match the Airtable Emails table schema
 export interface AirtableEmail {

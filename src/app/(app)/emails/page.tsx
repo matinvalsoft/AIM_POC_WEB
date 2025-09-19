@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CompactEmailsList } from "@/components/documents/compact-emails-list";
 import { HTMLEmailViewer } from "@/components/documents/html-email-viewer";
 import { EmailDetailsPanel } from "@/components/documents/email-details-panel";
@@ -10,6 +11,9 @@ import { cx } from "@/utils/cx";
 import type { AirtableEmail } from "@/lib/airtable/emails-hooks";
 
 export default function EmailsPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    
     const [selectedEmailId, setSelectedEmailId] = useState<string>('');
     const [subView, setSubView] = useState('all');
     const [activeTab, setActiveTab] = useState('overview');
@@ -18,6 +22,29 @@ export default function EmailsPage() {
     const { emails, loading, error, updateEmail, deleteEmail, markAsProcessed, markAsIgnored, retryProcessing } = useEmails({
         autoFetch: true
     });
+
+    // Sync URL with selectedEmailId
+    useEffect(() => {
+        const urlEmailId = searchParams.get('id');
+        if (urlEmailId && urlEmailId !== selectedEmailId) {
+            setSelectedEmailId(urlEmailId);
+        }
+    }, [searchParams, selectedEmailId]);
+
+    // Update URL when selectedEmailId changes
+    const updateSelectedEmailId = (emailId: string) => {
+        setSelectedEmailId(emailId);
+        
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        if (emailId) {
+            newSearchParams.set('id', emailId);
+        } else {
+            newSearchParams.delete('id');
+        }
+        
+        const newUrl = `/emails?${newSearchParams.toString()}`;
+        router.replace(newUrl, { scroll: false });
+    };
 
     // Debug logging
     useEffect(() => {
@@ -90,7 +117,7 @@ export default function EmailsPage() {
     // Set initial selection when emails load - use filtered emails
     useEffect(() => {
         if (filteredEmails.length > 0 && !selectedEmailId) {
-            setSelectedEmailId(filteredEmails[0].id);
+            updateSelectedEmailId(filteredEmails[0].id);
         }
     }, [filteredEmails, selectedEmailId]);
 
@@ -232,7 +259,7 @@ export default function EmailsPage() {
             // Clear selection if deleted email was selected
             if (selectedEmailId === email.id) {
                 const remainingEmails = emails.filter(e => e.id !== email.id);
-                setSelectedEmailId(remainingEmails.length > 0 ? remainingEmails[0].id : '');
+                updateSelectedEmailId(remainingEmails.length > 0 ? remainingEmails[0].id : '');
             }
         } catch (err) {
             console.error('Failed to delete email:', err);
@@ -289,7 +316,7 @@ export default function EmailsPage() {
                     emails={emails}
                     filteredEmails={filteredEmails}
                     selectedEmailId={selectedEmailId}
-                    onSelectionChange={setSelectedEmailId}
+                    onSelectionChange={updateSelectedEmailId}
                     subView={subView}
                     onSubViewChange={setSubView}
                 />

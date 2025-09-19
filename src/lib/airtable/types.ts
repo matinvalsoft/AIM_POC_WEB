@@ -319,3 +319,29 @@ export interface TypedAirtableUpdateRecord<T = Record<string, any>> {
   id: string;
   fields: Partial<T>;
 }
+
+// ============================================================================
+// Document Types (Application-specific)
+// ============================================================================
+
+export interface DocumentRecord {
+  id: string;
+  type: 'invoice' | 'email' | 'file';
+  title: string;
+  status?: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, any>;
+}
+
+// Legacy document type mapping for backwards compatibility
+export interface Document {
+  id: string;
+  type: 'invoice' | 'email' | 'file';
+  title: string;
+  status: string;
+  date: string;
+  amount?: number;
+  vendor?: string;
+  metadata?: Record<string, any>;
+}

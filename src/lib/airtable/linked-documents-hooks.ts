@@ -9,7 +9,7 @@ import { useAirtableRecords } from './hooks';
 import type { AirtableFile } from './files-hooks';
 import type { AirtableEmail } from './emails-hooks';
 
-const BASE_ID = 'appUKa7frdeLLPBr4';
+const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || 'applERrhATK0OQtqg';
 
 export interface LinkedDocuments {
     files: AirtableFile[];

@@ -9,6 +9,7 @@ import { Dropdown } from "@/components/base/dropdown/dropdown";
 import { ButtonUtility } from "@/components/base/buttons/button-utility";
 import { cx } from "@/utils/cx";
 import type { Invoice } from "@/types/documents";
+import { INVOICE_STATUS } from "@/lib/airtable/schema-types";
 import { hasBlockingIssues, sortInvoicesByPriority } from "@/utils/invoice-validation";
 
 interface CompactInvoiceListProps {
@@ -28,6 +29,7 @@ const InvoiceItem = ({ value, className, ...otherProps }: ListBoxItemProps<Invoi
         switch (status) {
             case 'approved': return 'success';
             case 'rejected': return 'error';
+            case 'reviewed': return 'success';
             case 'exported': return 'brand';
             case 'pending': return 'warning';
             case 'open': return 'gray';
@@ -39,6 +41,7 @@ const InvoiceItem = ({ value, className, ...otherProps }: ListBoxItemProps<Invoi
         switch (status) {
             case 'open': return 'Open';
             case 'pending': return 'Pending';
+            case 'reviewed': return 'Reviewed';
             case 'approved': return 'Approved';
             case 'rejected': return 'Rejected';
             case 'exported': return 'Exported';
@@ -128,11 +131,12 @@ export const CompactInvoiceList = ({
     const subViews = [
         { id: 'all', label: 'All', count: invoices.length },
         { id: 'missing_fields', label: 'Missing Fields', count: invoices.filter(inv => hasBlockingIssues(inv)).length },
-        { id: 'open', label: 'Open', count: invoices.filter(inv => inv.status === 'open').length },
-        { id: 'pending', label: 'Pending', count: invoices.filter(inv => inv.status === 'pending').length },
-        { id: 'approved', label: 'Approved', count: invoices.filter(inv => inv.status === 'approved').length },
-        { id: 'rejected', label: 'Rejected', count: invoices.filter(inv => inv.status === 'rejected').length },
-        { id: 'exported', label: 'Exported', count: invoices.filter(inv => inv.status === 'exported').length },
+        { id: 'open', label: 'Open', count: invoices.filter(inv => inv.status === INVOICE_STATUS.OPEN).length },
+        { id: 'reviewed', label: 'Reviewed', count: invoices.filter(inv => inv.status === INVOICE_STATUS.REVIEWED).length },
+        { id: 'pending', label: 'Pending', count: invoices.filter(inv => inv.status === INVOICE_STATUS.PENDING).length },
+        { id: 'approved', label: 'Approved', count: invoices.filter(inv => inv.status === INVOICE_STATUS.APPROVED).length },
+        { id: 'rejected', label: 'Rejected', count: invoices.filter(inv => inv.status === INVOICE_STATUS.REJECTED).length },
+        { id: 'exported', label: 'Exported', count: invoices.filter(inv => inv.status === INVOICE_STATUS.EXPORTED).length },
     ];
 
     // Use filtered invoices from props if provided, otherwise do our own filtering
@@ -142,11 +146,12 @@ export const CompactInvoiceList = ({
                 // Apply sub-view filter
                 switch (subView) {
                     case 'missing_fields': return hasBlockingIssues(invoice);
-                    case 'open': return invoice.status === 'open';
-                    case 'pending': return invoice.status === 'pending';
-                    case 'approved': return invoice.status === 'approved';
-                    case 'rejected': return invoice.status === 'rejected';
-                    case 'exported': return invoice.status === 'exported';
+                    case 'open': return invoice.status === INVOICE_STATUS.OPEN;
+                    case 'reviewed': return invoice.status === INVOICE_STATUS.REVIEWED;
+                    case 'pending': return invoice.status === INVOICE_STATUS.PENDING;
+                    case 'approved': return invoice.status === INVOICE_STATUS.APPROVED;
+                    case 'rejected': return invoice.status === INVOICE_STATUS.REJECTED;
+                    case 'exported': return invoice.status === INVOICE_STATUS.EXPORTED;
                     default: return true;
                 }
             })

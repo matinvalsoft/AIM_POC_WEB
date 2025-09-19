@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CompactFilesList } from "@/components/documents/compact-files-list";
 import { PDFViewer } from "@/components/documents/pdf-viewer";
 import { FileDetailsPanel } from "@/components/documents/file-details-panel";
@@ -10,6 +11,9 @@ import { cx } from "@/utils/cx";
 import type { AirtableFile } from "@/lib/airtable/files-hooks";
 
 export default function FilesPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    
     const [selectedFileId, setSelectedFileId] = useState<string>('');
     const [subView, setSubView] = useState('all');
     const [activeTab, setActiveTab] = useState('overview');
@@ -18,6 +22,29 @@ export default function FilesPage() {
     const { files, loading, error, updateFile, createFile, deleteFile, archiveFile } = useFiles({
         autoFetch: true
     });
+
+    // Sync URL with selectedFileId
+    useEffect(() => {
+        const urlFileId = searchParams.get('id');
+        if (urlFileId && urlFileId !== selectedFileId) {
+            setSelectedFileId(urlFileId);
+        }
+    }, [searchParams, selectedFileId]);
+
+    // Update URL when selectedFileId changes
+    const updateSelectedFileId = (fileId: string) => {
+        setSelectedFileId(fileId);
+        
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        if (fileId) {
+            newSearchParams.set('id', fileId);
+        } else {
+            newSearchParams.delete('id');
+        }
+        
+        const newUrl = `/files?${newSearchParams.toString()}`;
+        router.replace(newUrl, { scroll: false });
+    };
 
     const selectedFile = files.find(file => file.id === selectedFileId);
 
@@ -73,7 +100,7 @@ export default function FilesPage() {
     // Set initial selection when files load - use filtered files
     useEffect(() => {
         if (filteredFiles.length > 0 && !selectedFileId) {
-            setSelectedFileId(filteredFiles[0].id);
+            updateSelectedFileId(filteredFiles[0].id);
         }
     }, [filteredFiles, selectedFileId]);
 
@@ -176,7 +203,7 @@ export default function FilesPage() {
             // Clear selection if deleted file was selected
             if (selectedFileId === file.id) {
                 const remainingFiles = files.filter(f => f.id !== file.id);
-                setSelectedFileId(remainingFiles.length > 0 ? remainingFiles[0].id : '');
+                updateSelectedFileId(remainingFiles.length > 0 ? remainingFiles[0].id : '');
             }
         } catch (err) {
             console.error('Failed to delete file:', err);
@@ -245,7 +272,7 @@ export default function FilesPage() {
                         files={files}
                         filteredFiles={filteredFiles}
                         selectedFileId={selectedFileId}
-                        onSelectionChange={setSelectedFileId}
+                        onSelectionChange={updateSelectedFileId}
                         subView={subView}
                         onSubViewChange={setSubView}
                     />

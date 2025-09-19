@@ -150,6 +150,7 @@ export {
 
 // Re-export everything for convenience
 export * from './types';
+export * from './schema-types';
 export * from './client';
 export * from './formula';
 export * from './config';

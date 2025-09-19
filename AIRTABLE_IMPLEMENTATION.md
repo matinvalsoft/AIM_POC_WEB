@@ -9,6 +9,8 @@ This document provides a comprehensive overview of the Airtable integration impl
 **Base ID**: `appUKa7frdeLLPBr4`  
 **Status**: ✅ Complete, Tested & Production Ready  
 **Updated**: January 2025 - Complete schema verification and updates for all tables, NEW attachment fields added to ALL tables (Invoices/Files/Emails), expanded email routing, improved processing workflow  
+**Schema Update**: September 2025 - Latest schema fetched and TypeScript types regenerated with auto-generated schema types  
+**Major Update**: January 2025 - Schema v2.0.0 with breaking changes: new "reviewed" status, Teams table, ERP attributes rename, file processing enhancements  
 
 ---
 
@@ -20,6 +22,7 @@ This document provides a comprehensive overview of the Airtable integration impl
 src/lib/airtable/
 ├── client.ts        # Core Airtable API client with rate limiting
 ├── types.ts         # Complete TypeScript definitions
+├── schema-types.ts  # 🆕 Auto-generated schema-specific types and constants
 ├── formula.ts       # Safe filter formula builders
 ├── config.ts        # Environment configuration utilities
 ├── hooks.ts         # Generic React hooks for client-side usage

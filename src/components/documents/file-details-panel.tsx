@@ -217,7 +217,7 @@ export const FileDetailsPanel = ({
 
     // Check if file has blocking issues
     const hasBlockingIssues = (file: AirtableFile) => {
-        return file.status === 'Attention' || file.status === 'Error' || file.isDuplicate;
+        return file.status === 'Attention' || file.isDuplicate;
     };
 
 

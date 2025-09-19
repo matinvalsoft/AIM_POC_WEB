@@ -1,7 +1,8 @@
 import type { Invoice, DocumentLine, DocumentStatus } from '@/types/documents';
 import type { AirtableRecord } from './types';
+import { FIELD_IDS, TABLE_NAMES } from './schema-types';
 
-// Field mapping constants
+// Field mapping constants (using schema field names for compatibility)
 export const INVOICE_FIELDS = {
   INVOICE_NUMBER: 'Invoice Number',
   STATUS: 'Status',
@@ -13,8 +14,12 @@ export const INVOICE_FIELDS = {
   DUE_DATE: 'Due Date',
   AMOUNT: 'Amount',
   IS_MULTILINE_CODING: 'Is Multiline Coding',
+  ERP_ATTRIBUTE_1: 'ERP Attribute 1', // Previously "Project"
+  ERP_ATTRIBUTE_2: 'ERP Attribute 2', // Previously "Task"
+  ERP_ATTRIBUTE_3: 'ERP Attribute 3', // Previously "Cost Center"
   GL_ACCOUNT: 'GL Account',
   RAW_TEXT_OCR: 'Raw Text OCR',
+  REJECTION_CODE: 'Rejection Code', // NEW field
   REJECTION_REASON: 'Rejection Reason',
   DAYS_UNTIL_DUE: 'Days Until Due',
   ACTIVITIES: 'Activities',
@@ -22,7 +27,8 @@ export const INVOICE_FIELDS = {
   STORE_NUMBER: 'Store Number',
   FILES: 'Files',
   EMAILS: 'Emails',
-  ATTACHMENTS: 'Attachments'
+  ATTACHMENTS: 'Attachments',
+  TEAM: 'Team' // NEW field
 } as const;
 
 export const INVOICE_LINE_FIELDS = {
@@ -38,6 +44,9 @@ export const INVOICE_LINE_FIELDS = {
   CREATED_AT: 'Created At',
   UPDATED_AT: 'Updated At'
 } as const;
+
+// Export table names from schema
+export { TABLE_NAMES };
 
 /**
  * Transform Airtable invoice line record to DocumentLine
@@ -81,6 +90,7 @@ export function transformAirtableToInvoice(
     const statusMap: Record<string, DocumentStatus> = {
       'new': 'open',  // Map 'new' to 'open'
       'open': 'open',
+      'reviewed': 'reviewed', // NEW status
       'pending': 'pending',
       'approved': 'approved',
       'rejected': 'rejected',
@@ -91,9 +101,9 @@ export function transformAirtableToInvoice(
 
   // Calculate missing fields
   const missingFields: string[] = [];
-  if (!fields[INVOICE_FIELDS.PROJECT]) missingFields.push('project');
-  if (!fields[INVOICE_FIELDS.TASK]) missingFields.push('task');
-  if (!fields[INVOICE_FIELDS.COST_CENTER]) missingFields.push('costCenter');
+  if (!fields[INVOICE_FIELDS.ERP_ATTRIBUTE_1]) missingFields.push('erpAttribute1');
+  if (!fields[INVOICE_FIELDS.ERP_ATTRIBUTE_2]) missingFields.push('erpAttribute2');
+  if (!fields[INVOICE_FIELDS.ERP_ATTRIBUTE_3]) missingFields.push('erpAttribute3');
   if (!fields[INVOICE_FIELDS.GL_ACCOUNT]) missingFields.push('glAccount');
 
   return {
@@ -107,13 +117,15 @@ export function transformAirtableToInvoice(
     amount: fields[INVOICE_FIELDS.AMOUNT] || 0,
     invoiceDate: parseDate(fields[INVOICE_FIELDS.INVOICE_DATE]) || new Date(),
     dueDate: parseDate(fields[INVOICE_FIELDS.DUE_DATE]),
-    project: fields[INVOICE_FIELDS.PROJECT] || '',
-    task: fields[INVOICE_FIELDS.TASK] || '',
-    costCenter: fields[INVOICE_FIELDS.COST_CENTER] || '',
+    erpAttribute1: fields[INVOICE_FIELDS.ERP_ATTRIBUTE_1] || '', // Previously "project"
+    erpAttribute2: fields[INVOICE_FIELDS.ERP_ATTRIBUTE_2] || '', // Previously "task"
+    erpAttribute3: fields[INVOICE_FIELDS.ERP_ATTRIBUTE_3] || '', // Previously "costCenter"
     glAccount: fields[INVOICE_FIELDS.GL_ACCOUNT] || '',
     isMultilineCoding: fields[INVOICE_FIELDS.IS_MULTILINE_CODING] || false,
     rawTextOcr: fields[INVOICE_FIELDS.RAW_TEXT_OCR] || '',
+    rejectionCode: fields[INVOICE_FIELDS.REJECTION_CODE] || '', // NEW field
     rejectionReason: fields[INVOICE_FIELDS.REJECTION_REASON] || '',
+    team: fields[INVOICE_FIELDS.TEAM] || [], // NEW field
     lines: transformedLines,
     linkedIds: [], // Initialize as empty array for now
     
