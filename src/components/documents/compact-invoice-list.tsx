@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ListBox, ListBoxItem, type ListBoxItemProps } from "react-aria-components";
-import { SearchLg, AlertTriangle, ChevronDown, FilterLines } from "@untitledui/icons";
-import { Input } from "@/components/base/input/input";
+import { AlertTriangle, FilterLines } from "@untitledui/icons";
 import { Badge } from "@/components/base/badges/badges";
 import { Dropdown } from "@/components/base/dropdown/dropdown";
 import { ButtonUtility } from "@/components/base/buttons/button-utility";
@@ -126,7 +124,6 @@ export const CompactInvoiceList = ({
     onSubViewChange,
     keyboardNav
 }: CompactInvoiceListProps) => {
-    const [searchQuery, setSearchQuery] = useState("");
 
     const subViews = [
         { id: 'all', label: 'All', count: invoices.length },
@@ -157,23 +154,14 @@ export const CompactInvoiceList = ({
             })
     );
 
-    // Apply only search filtering if we have a search query
-    const finalInvoices = baseInvoices.filter(invoice => {
-        // Apply search filter
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            invoice.vendorName.toLowerCase().includes(query) ||
-            invoice.invoiceNumber.toLowerCase().includes(query) ||
-            invoice.vendorCode?.toLowerCase().includes(query)
-        );
-    });
+    // Use the base invoices directly without search filtering
+    const finalInvoices = baseInvoices;
 
     return (
         <div className="w-80 max-w-xs border-r border-secondary bg-primary flex flex-col flex-shrink-0 h-full">
             {/* Header */}
             <div className="px-4 py-4 border-b border-secondary flex-shrink-0">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between" style={{marginBottom: 0}}>
                     <div className="flex items-center gap-2">
                         <h2 className="text-lg font-semibold text-primary">
                             Invoices
@@ -214,24 +202,13 @@ export const CompactInvoiceList = ({
                 
                 {/* Current Filter */}
                 {subView !== 'all' && (
-                    <div className="mb-3">
+                    <div className="mb-3" style={{marginBottom: 0}}>
                         <span className="text-xs text-tertiary font-medium">
                             {subViews.find(v => v.id === subView)?.label}
                         </span>
                     </div>
                 )}
                 
-                {/* Search */}
-                <Input
-                    ref={keyboardNav?.searchInputRef}
-                    icon={SearchLg}
-                    placeholder="Search invoices"
-                    size="sm"
-                    value={searchQuery}
-                    onChange={(value) => setSearchQuery(String(value ?? ""))}
-                    onFocus={keyboardNav?.handleInputFocus}
-                    onBlur={keyboardNav?.handleInputBlur}
-                />
             </div>
 
             {/* Invoice List */}
@@ -255,7 +232,7 @@ export const CompactInvoiceList = ({
                         <div className="text-6xl mb-3">📄</div>
                         <h3 className="text-sm font-medium text-secondary mb-1">No invoices found</h3>
                         <p className="text-xs text-tertiary text-center">
-                            {searchQuery ? "Try adjusting your search" : "No invoices available"}
+                            No invoices available
                         </p>
                     </div>
                 )}
