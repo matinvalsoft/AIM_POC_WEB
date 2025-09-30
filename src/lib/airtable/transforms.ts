@@ -1,4 +1,4 @@
-import type { Invoice, DocumentLine, DocumentStatus } from '@/types/documents';
+import type { Invoice, DeliveryTicket, DocumentLine, DocumentStatus } from '@/types/documents';
 import type { AirtableRecord } from './types';
 import { FIELD_IDS, TABLE_NAMES } from './schema-types';
 
@@ -24,11 +24,38 @@ export const INVOICE_FIELDS = {
   DAYS_UNTIL_DUE: 'Days Until Due',
   ACTIVITIES: 'Activities',
   INVOICE_LINES: 'Invoice Lines',
-  STORE_NUMBER: 'Store Number',
   FILES: 'Files',
   EMAILS: 'Emails',
   ATTACHMENTS: 'Attachments',
-  TEAM: 'Team' // NEW field
+  TEAM: 'Team', // NEW field
+  MISSING_FIELDS: 'Missing Fields' // Server-side validation field
+} as const;
+
+export const DELIVERY_TICKET_FIELDS = {
+  DELIVERY_TICKET_ID: 'Delivery Ticket ID',
+  INVOICE_NUMBER: 'Invoice Number',
+  STATUS: 'Status',
+  CREATED_AT: 'Created At',
+  UPDATED_AT: 'Updated At',
+  VENDOR_NAME: 'Vendor Name',
+  VENDOR_CODE: 'Vendor Code',
+  INVOICE_DATE: 'Invoice Date',
+  DUE_DATE: 'Due Date',
+  AMOUNT: 'Amount',
+  ERP_ATTRIBUTE_1: 'ERP Attribute 1',
+  ERP_ATTRIBUTE_2: 'ERP Attribute 2',
+  ERP_ATTRIBUTE_3: 'ERP Attribute 3',
+  GL_ACCOUNT: 'GL Account',
+  RAW_TEXT_OCR: 'Raw Text OCR',
+  REJECTION_CODE: 'Rejection Code',
+  REJECTION_REASON: 'Rejection Reason',
+  DAYS_UNTIL_DUE: 'Days Until Due',
+  ACTIVITIES: 'Activities',
+  FILES: 'Files',
+  EMAILS: 'Emails',
+  ATTACHMENTS: 'Attachments',
+  TEAM: 'Team',
+  MISSING_FIELDS: 'Missing Fields' // Server-side validation field
 } as const;
 
 export const INVOICE_LINE_FIELDS = {
@@ -59,9 +86,6 @@ export function transformAirtableToInvoiceLine(record: AirtableRecord): Document
     lineNumber: fields[INVOICE_LINE_FIELDS.LINE_NUMBER] || 0,
     description: fields[INVOICE_LINE_FIELDS.DESCRIPTION] || '',
     amount: fields[INVOICE_LINE_FIELDS.AMOUNT] || 0,
-    project: fields[INVOICE_LINE_FIELDS.PROJECT] || '',
-    task: fields[INVOICE_LINE_FIELDS.TASK] || '',
-    costCenter: fields[INVOICE_LINE_FIELDS.COST_CENTER] || '',
     glAccount: fields[INVOICE_LINE_FIELDS.GL_ACCOUNT] || ''
   };
 }
@@ -99,18 +123,15 @@ export function transformAirtableToInvoice(
     return statusMap[airtableStatus] || 'open';
   };
 
-  // Calculate missing fields
-  const missingFields: string[] = [];
-  if (!fields[INVOICE_FIELDS.ERP_ATTRIBUTE_1]) missingFields.push('erpAttribute1');
-  if (!fields[INVOICE_FIELDS.ERP_ATTRIBUTE_2]) missingFields.push('erpAttribute2');
-  if (!fields[INVOICE_FIELDS.ERP_ATTRIBUTE_3]) missingFields.push('erpAttribute3');
-  if (!fields[INVOICE_FIELDS.GL_ACCOUNT]) missingFields.push('glAccount');
+  // Read server-side validation from Airtable (formula field)
+  const missingFieldsMessage = fields[INVOICE_FIELDS.MISSING_FIELDS] || '';
 
   return {
     id: record.id,
     type: 'invoices',
     status: mapStatus(fields[INVOICE_FIELDS.STATUS] || 'open'),
-    missingFields,
+    missingFields: [], // Deprecated - kept for compatibility
+    missingFieldsMessage, // Server-side validation message
     invoiceNumber: fields[INVOICE_FIELDS.INVOICE_NUMBER] || '',
     vendorName: fields[INVOICE_FIELDS.VENDOR_NAME] || '',
     vendorCode: fields[INVOICE_FIELDS.VENDOR_CODE] || '',
@@ -131,7 +152,6 @@ export function transformAirtableToInvoice(
     
     // New schema fields
     attachments: fields[INVOICE_FIELDS.ATTACHMENTS] || [], // Email attachments from linked emails
-    storeNumber: fields[INVOICE_FIELDS.STORE_NUMBER] || undefined,
     files: fields[INVOICE_FIELDS.FILES] || [],
     emails: fields[INVOICE_FIELDS.EMAILS] || [],
     
@@ -163,9 +183,9 @@ export function transformInvoiceToAirtable(invoice: Invoice): Record<string, any
   }
 
   // Coding fields
-  if (invoice.project) fields[INVOICE_FIELDS.PROJECT] = invoice.project;
-  if (invoice.task) fields[INVOICE_FIELDS.TASK] = invoice.task;
-  if (invoice.costCenter) fields[INVOICE_FIELDS.COST_CENTER] = invoice.costCenter;
+  if (invoice.erpAttribute1) fields[INVOICE_FIELDS.ERP_ATTRIBUTE_1] = invoice.erpAttribute1;
+  if (invoice.erpAttribute2) fields[INVOICE_FIELDS.ERP_ATTRIBUTE_2] = invoice.erpAttribute2;
+  if (invoice.erpAttribute3) fields[INVOICE_FIELDS.ERP_ATTRIBUTE_3] = invoice.erpAttribute3;
   if (invoice.glAccount) fields[INVOICE_FIELDS.GL_ACCOUNT] = invoice.glAccount;
 
   // Boolean fields
@@ -176,6 +196,11 @@ export function transformInvoiceToAirtable(invoice: Invoice): Record<string, any
   // Text fields
   if (invoice.rawTextOcr) fields[INVOICE_FIELDS.RAW_TEXT_OCR] = invoice.rawTextOcr;
   if (invoice.rejectionReason) fields[INVOICE_FIELDS.REJECTION_REASON] = invoice.rejectionReason;
+
+  // Team field (array of team IDs)
+  if (invoice.team && invoice.team.length > 0) {
+    fields[INVOICE_FIELDS.TEAM] = invoice.team;
+  }
 
   return fields;
 }
@@ -190,10 +215,109 @@ export function transformInvoiceLineToAirtable(line: DocumentLine, invoiceId?: s
   if (line.lineNumber !== undefined) fields[INVOICE_LINE_FIELDS.LINE_NUMBER] = line.lineNumber;
   if (line.description) fields[INVOICE_LINE_FIELDS.DESCRIPTION] = line.description;
   if (line.amount !== undefined) fields[INVOICE_LINE_FIELDS.AMOUNT] = line.amount;
-  if (line.project) fields[INVOICE_LINE_FIELDS.PROJECT] = line.project;
-  if (line.task) fields[INVOICE_LINE_FIELDS.TASK] = line.task;
-  if (line.costCenter) fields[INVOICE_LINE_FIELDS.COST_CENTER] = line.costCenter;
   if (line.glAccount) fields[INVOICE_LINE_FIELDS.GL_ACCOUNT] = line.glAccount;
+
+  return fields;
+}
+
+/**
+ * Transform Airtable delivery ticket record to DeliveryTicket
+ */
+export function transformAirtableToDeliveryTicket(record: AirtableRecord): DeliveryTicket {
+  const fields = record.fields;
+  
+  // Parse dates
+  const parseDate = (dateString: string | undefined) => {
+    return dateString ? new Date(dateString) : undefined;
+  };
+
+  // Map status from Airtable to our DocumentStatus type
+  const mapStatus = (airtableStatus: string): DocumentStatus => {
+    const statusMap: Record<string, DocumentStatus> = {
+      'new': 'open',  // Map 'new' to 'open'
+      'open': 'open',
+      'reviewed': 'reviewed',
+      'pending': 'pending',
+      'approved': 'approved',
+      'rejected': 'rejected',
+      'exported': 'exported'
+    };
+    return statusMap[airtableStatus] || 'open';
+  };
+
+  // Read server-side validation from Airtable (formula field)
+  const missingFieldsMessage = fields[DELIVERY_TICKET_FIELDS.MISSING_FIELDS] || '';
+
+  return {
+    id: record.id,
+    type: 'delivery-tickets',
+    status: mapStatus(fields[DELIVERY_TICKET_FIELDS.STATUS] || 'open'),
+    missingFields: [], // Deprecated - kept for compatibility
+    missingFieldsMessage, // Server-side validation message
+    invoiceNumber: fields[DELIVERY_TICKET_FIELDS.INVOICE_NUMBER] || '',
+    vendorName: fields[DELIVERY_TICKET_FIELDS.VENDOR_NAME] || '',
+    vendorCode: fields[DELIVERY_TICKET_FIELDS.VENDOR_CODE] || '',
+    amount: fields[DELIVERY_TICKET_FIELDS.AMOUNT] || 0,
+    invoiceDate: parseDate(fields[DELIVERY_TICKET_FIELDS.INVOICE_DATE]) || new Date(),
+    dueDate: parseDate(fields[DELIVERY_TICKET_FIELDS.DUE_DATE]),
+    isMultilineCoding: false, // Delivery tickets don't have multiline coding for now
+    erpAttribute1: fields[DELIVERY_TICKET_FIELDS.ERP_ATTRIBUTE_1] || '',
+    erpAttribute2: fields[DELIVERY_TICKET_FIELDS.ERP_ATTRIBUTE_2] || '',
+    erpAttribute3: fields[DELIVERY_TICKET_FIELDS.ERP_ATTRIBUTE_3] || '',
+    glAccount: fields[DELIVERY_TICKET_FIELDS.GL_ACCOUNT] || '',
+    rawTextOcr: fields[DELIVERY_TICKET_FIELDS.RAW_TEXT_OCR] || '',
+    rejectionCode: fields[DELIVERY_TICKET_FIELDS.REJECTION_CODE] || '',
+    rejectionReason: fields[DELIVERY_TICKET_FIELDS.REJECTION_REASON] || '',
+    team: fields[DELIVERY_TICKET_FIELDS.TEAM] || [],
+    linkedIds: [], // Initialize as empty array for now
+    
+    // New schema fields
+    attachments: fields[DELIVERY_TICKET_FIELDS.ATTACHMENTS] || [],
+    files: fields[DELIVERY_TICKET_FIELDS.FILES] || [],
+    emails: fields[DELIVERY_TICKET_FIELDS.EMAILS] || [],
+    
+    // Additional computed fields
+    createdAt: parseDate(fields[DELIVERY_TICKET_FIELDS.CREATED_AT]) || new Date(),
+    updatedAt: parseDate(fields[DELIVERY_TICKET_FIELDS.UPDATED_AT]) || new Date()
+  };
+}
+
+/**
+ * Transform DeliveryTicket to Airtable record format
+ */
+export function transformDeliveryTicketToAirtable(ticket: Partial<DeliveryTicket>): Record<string, any> {
+  const fields: Record<string, any> = {};
+
+  // Basic fields
+  if (ticket.invoiceNumber) fields[DELIVERY_TICKET_FIELDS.INVOICE_NUMBER] = ticket.invoiceNumber;
+  if (ticket.vendorName) fields[DELIVERY_TICKET_FIELDS.VENDOR_NAME] = ticket.vendorName;
+  if (ticket.vendorCode) fields[DELIVERY_TICKET_FIELDS.VENDOR_CODE] = ticket.vendorCode;
+  if (ticket.amount !== undefined) fields[DELIVERY_TICKET_FIELDS.AMOUNT] = ticket.amount;
+  if (ticket.status) fields[DELIVERY_TICKET_FIELDS.STATUS] = ticket.status;
+
+  // Dates
+  if (ticket.invoiceDate) {
+    fields[DELIVERY_TICKET_FIELDS.INVOICE_DATE] = ticket.invoiceDate.toISOString().split('T')[0];
+  }
+  if (ticket.dueDate) {
+    fields[DELIVERY_TICKET_FIELDS.DUE_DATE] = ticket.dueDate.toISOString().split('T')[0];
+  }
+
+  // Coding fields
+  if (ticket.erpAttribute1) fields[DELIVERY_TICKET_FIELDS.ERP_ATTRIBUTE_1] = ticket.erpAttribute1;
+  if (ticket.erpAttribute2) fields[DELIVERY_TICKET_FIELDS.ERP_ATTRIBUTE_2] = ticket.erpAttribute2;
+  if (ticket.erpAttribute3) fields[DELIVERY_TICKET_FIELDS.ERP_ATTRIBUTE_3] = ticket.erpAttribute3;
+  if (ticket.glAccount) fields[DELIVERY_TICKET_FIELDS.GL_ACCOUNT] = ticket.glAccount;
+
+  // Text fields
+  if (ticket.rawTextOcr) fields[DELIVERY_TICKET_FIELDS.RAW_TEXT_OCR] = ticket.rawTextOcr;
+  if (ticket.rejectionCode) fields[DELIVERY_TICKET_FIELDS.REJECTION_CODE] = ticket.rejectionCode;
+  if (ticket.rejectionReason) fields[DELIVERY_TICKET_FIELDS.REJECTION_REASON] = ticket.rejectionReason;
+
+  // Team field (array of team IDs)
+  if (ticket.team && ticket.team.length > 0) {
+    fields[DELIVERY_TICKET_FIELDS.TEAM] = ticket.team;
+  }
 
   return fields;
 }

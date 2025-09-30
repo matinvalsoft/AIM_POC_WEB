@@ -26,7 +26,8 @@ export interface BaseDocument {
     type: DocumentType;
     status: DocumentStatus;
     // completeness is not persisted; compute in UI
-    missingFields?: string[];
+    missingFields?: string[]; // Deprecated - kept for compatibility
+    missingFieldsMessage?: string; // Server-side validation from Airtable
     createdAt: Date;
     updatedAt: Date;
     lines?: DocumentLine[];
@@ -74,10 +75,9 @@ export interface Invoice extends BaseDocument {
     // Email attachments from linked emails (multipleLookupValues)
     attachments?: AirtableAttachment[];
     // Additional fields from schema
-    storeNumber?: string; // Store identifier for multi-location businesses
     files?: string[]; // Links to file records
     emails?: string[]; // Links to email records
-    team?: string[]; // Links to team records (NEW)
+    team?: string[]; // Links to team records (replaces Store Number)
 }
 
 // Purchase Order Document
@@ -129,8 +129,39 @@ export interface FileDocument extends BaseDocument {
 
 export type FileTag = 'duplicate' | 'corrupt' | 'unreadable' | 'password' | 'needs_split';
 
+// Delivery Ticket Document
+export interface DeliveryTicket extends BaseDocument {
+    type: 'delivery-tickets';
+    // Airtable structure - vendor split into separate fields
+    vendorName: string;
+    vendorCode?: string; // Optional/advisory only
+    invoiceNumber: string;
+    invoiceDate: Date;
+    dueDate?: Date; // Optional in Airtable schema
+    amount: number;
+    // Coding mode control (same as invoices for compatibility)
+    isMultilineCoding?: boolean; // Controls whether to use document-level or line-level coding
+    // ERP attributes (same structure as invoices)
+    erpAttribute1?: string; // Previously "project"
+    erpAttribute2?: string; // Previously "task"
+    erpAttribute3?: string; // Previously "cost center"
+    // Delivery ticket-level coding fields
+    glAccount?: string; // 6-digit
+    // Document processing
+    rawTextOcr?: string; // OCR extracted text from original document
+    // Rejection tracking
+    rejectionCode?: string; // Structured rejection code
+    rejectionReason?: string; // Human-readable rejection reason
+    // Email attachments from linked emails (multipleLookupValues)
+    attachments?: AirtableAttachment[];
+    // Additional fields from schema
+    files?: string[]; // Links to file records
+    emails?: string[]; // Links to email records
+    team?: string[]; // Links to team records
+}
+
 // Union type for all documents
-export type Document = Invoice | PurchaseOrder | Shipping | BankStatement | FileDocument;
+export type Document = Invoice | DeliveryTicket | PurchaseOrder | Shipping | BankStatement | FileDocument;
 
 // Document Link
 export interface DocumentLink {
@@ -288,6 +319,51 @@ export const FILES_SUB_VIEWS: DocumentSubView[] = [
         filter: (docs: Document[]) => docs.filter(doc => 
             doc.type === 'files' && (doc as FileDocument).tags.includes('corrupt')
         )
+    }
+];
+
+export const DELIVERY_TICKET_SUB_VIEWS: DocumentSubView[] = [
+    {
+        id: 'all',
+        label: 'All',
+        filter: () => true as any
+    },
+    {
+        id: 'missing_fields',
+        label: 'Missing Fields',
+        filter: (docs: Document[]) => docs.filter(doc => doc.type === 'delivery-tickets' && (
+            (doc as any).vendorName && (doc as any).invoiceNumber && (doc as any).amount
+        ) === false)
+    },
+    {
+        id: 'open',
+        label: 'Open',
+        filter: (docs: Document[]) => docs.filter(doc => doc.status === 'open')
+    },
+    {
+        id: 'reviewed',
+        label: 'Reviewed',
+        filter: (docs: Document[]) => docs.filter(doc => doc.status === 'reviewed')
+    },
+    {
+        id: 'pending',
+        label: 'Pending',
+        filter: (docs: Document[]) => docs.filter(doc => doc.status === 'pending')
+    },
+    {
+        id: 'approved',
+        label: 'Approved',
+        filter: (docs: Document[]) => docs.filter(doc => doc.status === 'approved')
+    },
+    {
+        id: 'rejected',
+        label: 'Rejected',
+        filter: (docs: Document[]) => docs.filter(doc => doc.status === 'rejected')
+    },
+    {
+        id: 'exported',
+        label: 'Exported',
+        filter: (docs: Document[]) => docs.filter(doc => doc.status === 'exported')
     }
 ];
 

@@ -54,6 +54,7 @@ export const FIELD_IDS = {
     EMAILS: 'fldgdXEnSklAfPeSs',
     ATTACHMENTS: 'fld5LeydwwVmVufs4',
     TEAM: 'fldG2o6HeG4ZgsG2U', // NEW field - link to Teams table
+    MISSING_FIELDS: 'fldMissingFieldsFormula', // Server-side validation formula field
   },
   INVOICE_LINES: {
     AUTO_NUMBER: 'fldp1qMEJnUX0apFF',
@@ -208,6 +209,7 @@ export interface InvoiceFields {
   [FIELD_IDS.INVOICES.EMAILS]?: string[];
   [FIELD_IDS.INVOICES.ATTACHMENTS]?: AirtableAttachment[];
   [FIELD_IDS.INVOICES.TEAM]?: string[]; // NEW field - link to Teams
+  [FIELD_IDS.INVOICES.MISSING_FIELDS]?: string; // Server-side validation formula field
 }
 
 export interface InvoiceLineFields {
@@ -312,6 +314,7 @@ export interface InvoiceRecord {
   emails?: string[];
   attachments?: AirtableAttachment[];
   team?: string[]; // NEW field
+  missingFields?: string; // Server-side validation formula field
 }
 
 export interface InvoiceLineRecord {

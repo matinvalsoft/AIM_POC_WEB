@@ -30,10 +30,8 @@ export const useKeyboardNavigation = ({
     // Tab configuration
     const tabs = [
         { id: "extracted", label: "Header" },
-        { id: "coding", label: "Coding" },
         { id: "raw", label: "Raw" },
-        { id: "links", label: "Links" },
-        { id: "activity", label: "Activity" }
+        { id: "links", label: "Links" }
     ];
 
     // Invoice navigation - j goes down (next), k goes up (previous)

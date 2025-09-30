@@ -5,7 +5,6 @@ import type { Key } from "react";
 import { parseDate, getLocalTimeZone } from "@internationalized/date";
 import { Tabs, TabList, Tab, TabPanel } from "@/components/application/tabs/tabs";
 import { Input } from "@/components/base/input/input";
-import { AmountInput } from "@/components/base/input/amount-input";
 import { FormField } from "@/components/base/input/form-field";
 import { DatePicker } from "@/components/application/date-picker/date-picker";
 import { Select } from "@/components/base/select/select";
@@ -14,29 +13,28 @@ import { ButtonUtility } from "@/components/base/buttons/button-utility";
 import { Badge } from "@/components/base/badges/badges";
 import { AlertTriangle, CheckCircle, Clock, User01, LinkExternal01, Trash01, Copy01, Mail01, File01, MessageChatCircle, FileCheck02, Receipt, CreditCard01, Package, Edit03, FileDownload02 } from "@untitledui/icons";
 import { cx } from "@/utils/cx";
-import { InvoiceCodingInterface } from "@/components/documents/invoice-coding-interface";
-import { LinksTab, RawContentTab, ActivityTimeline } from "@/components/documents/shared-tabs";
+import { LinksTab, RawContentTab } from "@/components/documents/shared-tabs";
 import { DialogTrigger, ModalOverlay, Modal, Dialog } from "@/components/application/modals/modal";
-import { useActivities, useTeams } from "@/lib/airtable";
-import { useInvoiceLinks } from "@/lib/airtable/linked-documents-hooks";
-import type { Invoice, DocumentLink } from "@/types/documents";
+import { useTeams } from "@/lib/airtable";
+import { useDocumentLinks } from "@/lib/airtable/linked-documents-hooks";
+import type { Invoice, DeliveryTicket, DocumentLink } from "@/types/documents";
 import { INVOICE_STATUS } from "@/lib/airtable/schema-types";
 import { validateInvoice, getMissingFieldsMessage, isMultiLineMode } from "@/utils/invoice-validation";
 
 
 
 interface DocumentDetailsPanelProps {
-    document?: Invoice;
+    document?: Invoice | DeliveryTicket;
     className?: string;
-    onSave?: (document: Invoice) => void;
-    onSendForApproval?: (document: Invoice) => void;
-    onApprove?: (document: Invoice) => void;
-    onReject?: (document: Invoice) => void;
-    onReopen?: (document: Invoice) => void;
-    onResendForApproval?: (document: Invoice) => void;
-    onViewReason?: (document: Invoice) => void;
-    onViewInOracle?: (document: Invoice) => void;
-    onDelete?: (document: Invoice) => void;
+    onSave?: (document: Invoice | DeliveryTicket) => void;
+    onSendForApproval?: (document: Invoice | DeliveryTicket) => void;
+    onApprove?: (document: Invoice | DeliveryTicket) => void;
+    onReject?: (document: Invoice | DeliveryTicket) => void;
+    onReopen?: (document: Invoice | DeliveryTicket) => void;
+    onResendForApproval?: (document: Invoice | DeliveryTicket) => void;
+    onViewReason?: (document: Invoice | DeliveryTicket) => void;
+    onViewInOracle?: (document: Invoice | DeliveryTicket) => void;
+    onDelete?: (document: Invoice | DeliveryTicket) => void;
     activeTab?: string;
     onTabChange?: (tab: string) => void;
     keyboardNav?: any;
@@ -45,11 +43,11 @@ interface DocumentDetailsPanelProps {
 const CompletenessChecker = ({ document }: { document?: Invoice }) => {
     if (!document) return null;
 
-    const validation = validateInvoice(document);
+    // Use server-side validation from Airtable
     const issueMessage = getMissingFieldsMessage(document);
 
-    // Hide alert entirely if no blocking issues
-    if (validation.canMarkAsReviewed) {
+    // Hide alert if no issues (empty message means all fields are complete)
+    if (!issueMessage || issueMessage.trim() === '') {
         return null;
     }
 
@@ -111,7 +109,7 @@ export const DocumentDetailsPanel = ({
     keyboardNav
 }: DocumentDetailsPanelProps) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [editedDocument, setEditedDocument] = useState<Invoice | undefined>(document);
+    const [editedDocument, setEditedDocument] = useState<Invoice | DeliveryTicket | undefined>(document);
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
     const [editingVendorName, setEditingVendorName] = useState('');
     const [isUpdatingVendor, setIsUpdatingVendor] = useState(false);
@@ -127,14 +125,11 @@ export const DocumentDetailsPanel = ({
         }
     }, [keyboardNav]);
 
-    // Fetch activities for the current document
-    const { activities, loading: activitiesLoading, error: activitiesError } = useActivities({
-        invoiceId: document?.id,
-        autoFetch: true
-    });
 
     // Fetch linked documents (files and emails) for the current document
-    const { linkedItems, files, emails, loading: linkedDocsLoading, error: linkedDocsError } = useInvoiceLinks(document?.id);
+    // Determine document type and use appropriate hook
+    const documentType = document?.type === 'delivery-tickets' ? 'delivery-ticket' : 'invoice';
+    const { linkedItems, files, emails, loading: linkedDocsLoading, error: linkedDocsError } = useDocumentLinks(document?.id, documentType);
 
     // Fetch teams data for store number dropdown
     const { teams, loading: teamsLoading, error: teamsError } = useTeams();
@@ -212,9 +207,9 @@ export const DocumentDetailsPanel = ({
         if (!document || !editedDocument) return false;
         
         // Check all editable fields
-        const fieldsToCheck: (keyof Invoice)[] = [
-            "vendorName", "invoiceNumber", "amount", "invoiceDate", "dueDate",
-            "project", "task", "costCenter", "glAccount", "isMultilineCoding"
+        const fieldsToCheck: (keyof (Invoice | DeliveryTicket))[] = [
+            "vendorName", "invoiceNumber", "invoiceDate", "dueDate",
+            "erpAttribute1", "erpAttribute2", "erpAttribute3", "glAccount", "isMultilineCoding", "team"
         ];
         
         // Check top-level fields
@@ -225,6 +220,19 @@ export const DocumentDetailsPanel = ({
             // Handle Date objects specially
             if (originalValue instanceof Date && editedValue instanceof Date) {
                 return originalValue.getTime() !== editedValue.getTime();
+            }
+            
+            // Handle array fields (like team) specially
+            if (Array.isArray(originalValue) && Array.isArray(editedValue)) {
+                if (originalValue.length !== editedValue.length) {
+                    return true;
+                }
+                return originalValue.some((val, index) => val !== editedValue[index]);
+            }
+            
+            // Handle array vs non-array comparison
+            if (Array.isArray(originalValue) !== Array.isArray(editedValue)) {
+                return true;
             }
             
             // Handle null/undefined equivalence
@@ -493,40 +501,11 @@ export const DocumentDetailsPanel = ({
         }
     };
 
-    const handleCodingChange = (invoiceCoding?: any, lineCoding?: any) => {
-        if (editedDocument && invoiceCoding) {
-            setEditedDocument({
-                ...editedDocument,
-                glAccount: invoiceCoding.glAccount,
-                isMultilineCoding: invoiceCoding.isMultilineCoding,
-            });
-            setIsEditing(true);
-        }
-        // Note: Line-level coding would require extending the data model
-        // For now, we're just handling invoice-level coding
-    };
-
-    const handleLineUpdate = (lineId: string, field: 'description' | 'amount', value: string | number) => {
-        if (editedDocument && editedDocument.lines) {
-            const updatedLines = editedDocument.lines.map(line => 
-                line.id === lineId 
-                    ? { ...line, [field]: value }
-                    : line
-            );
-            setEditedDocument({
-                ...editedDocument,
-                lines: updatedLines,
-            });
-            setIsEditing(true);
-        }
-    };
 
     const tabs = keyboardNav?.tabs || [
         { id: "extracted", label: "Header" },
-        { id: "coding", label: "Coding" },
         { id: "raw", label: "Raw" },
-        { id: "links", label: "Links" },
-        { id: "activity", label: "Activity" }
+        { id: "links", label: "Links" }
     ];
 
     // Move all hooks before any conditional returns
@@ -537,10 +516,25 @@ export const DocumentDetailsPanel = ({
 
     // Transform teams data for the store number dropdown
     const teamsSelectItems = useMemo(() => {
-        return teams.map(team => ({
-            id: team.id, // Use Airtable record ID for unique keys
-            label: team.fullName ? `${team.name} - ${team.fullName}` : team.name // Team name with dash and full name
-        }));
+        return teams
+            .map(team => ({
+                id: team.id, // Use Airtable record ID for unique keys
+                label: team.fullName ? `${team.name} - ${team.fullName}` : team.name, // Team name with dash and full name
+                name: team.name // Keep original name for sorting
+            }))
+            .sort((a, b) => {
+                // Sort by name as integer (1, 2, 3, ..., 10) instead of string sorting
+                const aNum = parseInt(a.name, 10);
+                const bNum = parseInt(b.name, 10);
+                
+                // If both are valid numbers, sort numerically
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return aNum - bNum;
+                }
+                
+                // If one or both are not numbers, fall back to string sorting
+                return a.name.localeCompare(b.name);
+            });
     }, [teams]);
 
     // Find the selected team ID based on the current team field (array of team IDs)
@@ -613,16 +607,15 @@ export const DocumentDetailsPanel = ({
                         items={tabs}
                         type="underline"
                         size="sm"
-                        className="px-6 pt-2"
+                        className="px-6 pt-2 w-full flex justify-between"
                     >
-                        {(item) => <Tab key={item.id} id={item.id} label={item.label} />}
+                        {(item) => <Tab key={item.id} id={item.id} label={item.label} className="flex-1 text-center" />}
                     </TabList>
                 </div>
 
                 {/* Content */}
-                <div ref={contentAreaRef} className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0 w-full max-w-full" data-keyboard-nav-container>
-                    <TabPanel id="extracted">
-                        <div className="space-y-4 w-full max-w-full">
+                <div ref={contentAreaRef} className="flex-1 overflow-y-auto min-h-0 w-full max-w-full" style={{ padding: '18px' }} data-keyboard-nav-container>
+                    <TabPanel id="extracted" className="space-y-4">
                             <div>
                                 <label className="text-xs font-medium text-tertiary mb-1 block">Store Number</label>
                                 <Select
@@ -696,16 +689,6 @@ export const DocumentDetailsPanel = ({
                                     )}
                                 </Select>
                             </div>
-                            <FormField label="Amount">
-                                <AmountInput
-                                    value={currentDoc?.amount || 0}
-                                    onChange={(value) => updateField('amount', value)}
-                                    size="sm"
-                                    isDisabled={!canEdit}
-                                    onFocus={keyboardNav?.handleInputFocus}
-                                    onBlur={keyboardNav?.handleInputBlur}
-                                />
-                            </FormField>
                             <div>
                                 <label className="text-xs font-medium text-tertiary mb-1 block">Invoice Number</label>
                                 <Input 
@@ -733,46 +716,62 @@ export const DocumentDetailsPanel = ({
                                     onBlur={keyboardNav?.handleInputBlur}
                                 />
                             </div>
-                        </div>
-                    </TabPanel>
-
-                    <TabPanel id="coding">
-                        <div className="w-full max-w-full">
-                            {currentDoc && (
-                                <InvoiceCodingInterface
-                                    invoice={currentDoc}
-                                    onCodingChange={handleCodingChange}
-                                    onLineUpdate={handleLineUpdate}
-                                    disabled={!canEdit}
-                                    keyboardNav={keyboardNav}
+                            <div>
+                                <label className="text-xs font-medium text-tertiary mb-1 block">GL Account</label>
+                                <Input 
+                                    placeholder="000000"
+                                    value={currentDoc?.glAccount || ''}
+                                    onChange={(value) => updateField('glAccount', value)}
+                                    size="sm"
+                                    maxLength={6}
+                                    pattern="[0-9]{6}"
+                                    isDisabled={!canEdit}
+                                    onFocus={keyboardNav?.handleInputFocus}
+                                    onBlur={keyboardNav?.handleInputBlur}
                                 />
-                            )}
-                        </div>
+                            </div>
                     </TabPanel>
 
                     <TabPanel id="raw">
-                        <div className="w-full max-w-full">
-                            <RawContentTab 
-                                title="Raw Document Text"
-                                rawText={`INVOICE\nInvoice #: ${currentDoc?.invoiceNumber || ''}\nDate: ${currentDoc?.invoiceDate?.toLocaleDateString() || ''}\nFrom: ${currentDoc?.vendorName || ''}\nAmount: ${new Intl.NumberFormat('en-US', {
-                                    style: 'currency',
-                                    currency: 'USD',
-                                }).format(currentDoc?.amount || 0)}${currentDoc?.lines?.map((line) => `\n• ${line.description} - ${new Intl.NumberFormat('en-US', {
-                                    style: 'currency',
-                                    currency: 'USD',
-                                }).format(line.amount)}`).join('') || ''}`}
-                                keyValues={{
-                                    'Invoice #': currentDoc?.invoiceNumber,
-                                    'Date': currentDoc?.invoiceDate?.toLocaleDateString(),
-                                    'From': currentDoc?.vendorName,
-                                    'Amount': currentDoc?.amount
+                        <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-medium text-secondary truncate flex-1 min-w-0">Raw Document Text</h4>
+                            <ButtonUtility 
+                                size="xs" 
+                                color="secondary"
+                                icon={Copy01}
+                                tooltip="Copy raw text"
+                                onClick={() => {
+                                    const rawText = `DELIVERY TICKET\nTicket #: ${currentDoc?.invoiceNumber || ''}\nDate: ${currentDoc?.invoiceDate?.toLocaleDateString() || ''}\nFrom: ${currentDoc?.vendorName || ''}${currentDoc?.lines?.map((line) => `\n• ${line.description}`).join('') || ''}`;
+                                    navigator.clipboard.writeText(rawText);
                                 }}
+                                className="flex-shrink-0 ml-2"
                             />
+                        </div>
+                        <div className="text-xs text-tertiary font-mono bg-tertiary rounded p-3 overflow-y-auto overflow-x-hidden">
+                            <div className="space-y-2 overflow-hidden">
+                                {currentDoc?.invoiceNumber && (
+                                    <p className="break-all overflow-hidden">
+                                        <strong className="break-normal">Ticket #:</strong> {currentDoc.invoiceNumber}
+                                    </p>
+                                )}
+                                {currentDoc?.invoiceDate && (
+                                    <p className="break-all overflow-hidden">
+                                        <strong className="break-normal">Date:</strong> {currentDoc.invoiceDate.toLocaleDateString()}
+                                    </p>
+                                )}
+                                {currentDoc?.vendorName && (
+                                    <p className="break-all overflow-hidden">
+                                        <strong className="break-normal">From:</strong> {currentDoc.vendorName}
+                                    </p>
+                                )}
+                                <div className="whitespace-pre-wrap break-words overflow-hidden">
+                                    {`DELIVERY TICKET\nTicket #: ${currentDoc?.invoiceNumber || ''}\nDate: ${currentDoc?.invoiceDate?.toLocaleDateString() || ''}\nFrom: ${currentDoc?.vendorName || ''}${currentDoc?.lines?.map((line) => `\n• ${line.description}`).join('') || ''}`}
+                                </div>
+                            </div>
                         </div>
                     </TabPanel>
 
-                    <TabPanel id="links">
-                        <div className="w-full max-w-full space-y-6">
+                    <TabPanel id="links" className="space-y-6">
                             {linkedDocsLoading && (
                                 <div className="flex items-center justify-center py-8">
                                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -796,17 +795,6 @@ export const DocumentDetailsPanel = ({
                                     emptyStateMessage="No documents linked to this invoice"
                                 />
                             )}
-                        </div>
-                    </TabPanel>
-
-                    <TabPanel id="activity">
-                        <div className="w-full max-w-full">
-                            <ActivityTimeline 
-                                activities={activities}
-                                loading={activitiesLoading}
-                                error={activitiesError || undefined}
-                            />
-                        </div>
                     </TabPanel>
                 </div>
             </Tabs>

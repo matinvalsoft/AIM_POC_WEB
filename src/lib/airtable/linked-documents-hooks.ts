@@ -92,14 +92,14 @@ function transformInvoiceRecord(record: any): any {
 /**
  * Hook to fetch linked documents for any document type (invoice, email, file)
  */
-export function useLinkedDocuments(documentId?: string, documentType?: 'invoice' | 'email' | 'file'): LinkedDocuments {
+export function useLinkedDocuments(documentId?: string, documentType?: 'invoice' | 'delivery-ticket' | 'email' | 'file'): LinkedDocuments {
     const [files, setFiles] = useState<AirtableFile[]>([]);
     const [emails, setEmails] = useState<AirtableEmail[]>([]);
     const [invoices, setInvoices] = useState<any[]>([]); // TODO: Import proper Invoice type
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchLinkedDocuments = useCallback(async (id: string, docType: 'invoice' | 'email' | 'file') => {
+    const fetchLinkedDocuments = useCallback(async (id: string, docType: 'invoice' | 'delivery-ticket' | 'email' | 'file') => {
         setLoading(true);
         setError(null);
 
@@ -111,6 +111,9 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
             switch (docType) {
                 case 'invoice':
                     currentDocResponse = await fetch(`/api/airtable/Invoices?baseId=${BASE_ID}&pageSize=100`);
+                    break;
+                case 'delivery-ticket':
+                    currentDocResponse = await fetch(`/api/airtable/Delivery%20Ticket?baseId=${BASE_ID}&pageSize=100`);
                     break;
                 case 'email':
                     currentDocResponse = await fetch(`/api/airtable/Emails?baseId=${BASE_ID}&pageSize=100`);
@@ -339,7 +342,7 @@ export function useLinkedEmails(invoiceIds: string[] = []) {
 /**
  * Combined hook for getting all document links for any document type (including transformed data for LinksTab)
  */
-export function useDocumentLinks(documentId?: string, documentType?: 'invoice' | 'email' | 'file') {
+export function useDocumentLinks(documentId?: string, documentType?: 'invoice' | 'delivery-ticket' | 'email' | 'file') {
     const { files, emails, invoices, loading, error } = useLinkedDocuments(documentId, documentType);
 
     const linkedItems = useMemo(() => {
