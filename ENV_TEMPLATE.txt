@@ -1,0 +1,38 @@
+# ===== REQUIRED ENVIRONMENT VARIABLES =====
+# Copy this file to .env.local and fill in the actual values
+
+# Airtable Configuration
+AIRTABLE_BASE_ID=your_airtable_base_id_here
+AIRTABLE_PAT=your_airtable_personal_access_token_here
+NEXT_PUBLIC_AIRTABLE_BASE_ID=your_airtable_base_id_here
+
+# OpenAI Configuration (you mentioned you already have this)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Vercel Blob Configuration (you mentioned you already have this)
+BLOB_READ_WRITE_TOKEN=your_vercel_blob_token_here
+
+# ===== OPTIONAL ENVIRONMENT VARIABLES =====
+# These have defaults but you can customize them
+
+# Airtable Table Name (defaults to 'Files')
+AIRTABLE_TABLE_NAME=Files
+
+# OpenAI Model Configuration
+OPENAI_MODEL_NAME=gpt-4o
+OPENAI_TIMEOUT_SECONDS=90
+MAX_VISION_RETRIES=1
+RETRY_BACKOFF_SECONDS=2
+
+# PDF Processing
+PDF_DPI=150
+MAX_PAGES_PER_DOC=50
+
+# Image Chunking
+SHORT_SIDE_PX=512
+LONG_SIDE_MAX_PX=2048
+ASPECT_TRIGGER=2.7
+OVERLAP_PCT=0.05
+
+# Concurrency
+MAX_PARALLEL_VISION_CALLS=5

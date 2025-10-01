@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createAirtableClient, buildFilter, filters } from './index';
 import type { AirtableAttachment } from './types';
 
-const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || 'applERrhATK0OQtqg';
+const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
 
 // Types that match the Airtable Files table schema
 export interface AirtableFile {
@@ -73,8 +73,8 @@ export interface UseFileCountsResult {
  * Transform Airtable record to AirtableFile
  */
 function transformAirtableRecord(record: any): AirtableFile {
-    const relatedInvoices = record.fields['Related Invoices'] || [];
-    const relatedEmails = record.fields['Related Emails'] || [];
+    const relatedInvoices = record.fields['Invoices'] || []; // Updated field name
+    const relatedEmails = record.fields['Emails'] || []; // Updated field name
     // Calculate isLinked based on non-email document links (invoices, POs, etc.)
     const isLinked = relatedInvoices.length > 0;
     
@@ -85,8 +85,8 @@ function transformAirtableRecord(record: any): AirtableFile {
         source: record.fields['Source'] || 'Upload',
         status: record.fields['Status'] || 'Queued',
         pages: record.fields['Pages'] || undefined,
-        isDuplicate: false, // Field was removed in schema v2.0.0
-        duplicateOf: record.fields['Error Code'] || '', // Renamed from 'Duplicate Of'
+        isDuplicate: false, // This field was removed from schema
+        duplicateOf: [], // This field was removed from schema
         relatedInvoices,
         activity: record.fields['Activity'] || [],
         relatedEmails,
@@ -360,6 +360,13 @@ export function useFileCounts(): UseFileCountsResult {
 
     const fetchCounts = useCallback(async () => {
         try {
+            // Check if BASE_ID is available
+            if (!BASE_ID) {
+                console.warn('AIRTABLE_BASE_ID not configured, skipping file counts fetch');
+                setLoading(false);
+                return;
+            }
+
             const response = await fetch(`/api/airtable/Files?baseId=${BASE_ID}&pageSize=100`);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);

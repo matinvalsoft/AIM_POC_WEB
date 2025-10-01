@@ -9,7 +9,7 @@ import { transformAirtableToDeliveryTicket, transformDeliveryTicketToAirtable } 
 import type { DeliveryTicket } from '@/types/documents';
 import type { AirtableRecord } from './types';
 
-const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || 'applERrhATK0OQtqg';
+const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
 
 interface UseDeliveryTicketsOptions {
   filter?: string;

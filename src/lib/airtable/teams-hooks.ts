@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Team, TeamRecord } from './schema-types';
 import { TABLE_NAMES, FIELD_IDS } from './schema-types';
 
-const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID || 'applERrhATK0OQtqg';
+const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
 
 interface UseTeamsOptions {
   autoFetch?: boolean;

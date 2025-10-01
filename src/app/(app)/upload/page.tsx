@@ -29,7 +29,7 @@ export default function UploadPage() {
         return files.some(file => file.progress < 100 && !file.failed);
     }, [files]);
 
-    const simulateFileUpload = (uploadedFiles: FileList) => {
+    const uploadFiles = async (uploadedFiles: FileList) => {
         const newFiles: UploadedFile[] = Array.from(uploadedFiles).map((file) => ({
             id: Math.random().toString(36).substr(2, 9),
             name: file.name,
@@ -40,23 +40,51 @@ export default function UploadPage() {
 
         setFiles((prev) => [...prev, ...newFiles]);
 
-        // Simulate upload progress for each file
-        newFiles.forEach((file) => {
-            const interval = setInterval(() => {
-                setFiles((prev) =>
-                    prev.map((f) => {
-                        if (f.id === file.id) {
-                            const newProgress = Math.min(f.progress + Math.random() * 30, 100);
-                            if (newProgress === 100) {
-                                clearInterval(interval);
-                            }
-                            return { ...f, progress: newProgress };
-                        }
-                        return f;
-                    })
-                );
-            }, 200);
-        });
+        // Upload each file to the API
+        for (const uploadFile of newFiles) {
+            try {
+                // Get the actual File object
+                const actualFile = Array.from(uploadedFiles).find(f => f.name === uploadFile.name);
+                if (!actualFile) continue;
+
+                // Create FormData for upload
+                const formData = new FormData();
+                formData.append('file', actualFile);
+
+                // Start upload
+                setFiles(prev => prev.map(f => 
+                    f.id === uploadFile.id ? { ...f, progress: 10 } : f
+                ));
+
+                // Upload to API
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Upload successful
+                    setFiles(prev => prev.map(f => 
+                        f.id === uploadFile.id ? { ...f, progress: 100 } : f
+                    ));
+                    console.log('File uploaded successfully:', result);
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                setFiles(prev => prev.map(f => 
+                    f.id === uploadFile.id ? { ...f, failed: true, progress: 0 } : f
+                ));
+            }
+        }
     };
 
     const handleDelete = (fileId: string) => {
@@ -132,7 +160,7 @@ export default function UploadPage() {
                     hint="All document types accepted - PDF, DOC, XLS, images, and more up to 50MB each"
                     maxSize={50 * 1024 * 1024} // 50MB
                     allowsMultiple={true}
-                    onDropFiles={simulateFileUpload}
+                    onDropFiles={uploadFiles}
                     onDropUnacceptedFiles={(rejectedFiles) => {
                         console.log("Rejected files:", rejectedFiles);
                         // Handle rejected files (show error message, etc.)
