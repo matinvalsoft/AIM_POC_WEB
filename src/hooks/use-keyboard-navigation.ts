@@ -24,7 +24,6 @@ export const useKeyboardNavigation = ({
 }: UseKeyboardNavigationProps = {}) => {
     const [mode, setMode] = useState<NavigationMode>('navigation');
     
-    const searchInputRef = useRef<HTMLInputElement>(null);
     const detailsContainerRef = useRef<HTMLDivElement>(null);
 
     // Tab configuration
@@ -92,16 +91,6 @@ export const useKeyboardNavigation = ({
         onTabChange(tabs[nextIndex].id);
     }, [mode, onTabChange, activeTab, tabs]);
 
-    // Search focus
-    const focusSearch = useCallback(() => {
-        if (mode !== 'navigation') return;
-        
-        if (searchInputRef.current) {
-            searchInputRef.current.focus();
-            setMode('typing');
-        }
-    }, [mode]);
-
     // Save action
     const handleSave = useCallback(() => {
         if (mode !== 'navigation' || !onSave) return;
@@ -156,11 +145,6 @@ export const useKeyboardNavigation = ({
         // Blur any focused input
         if (document.activeElement && document.activeElement instanceof HTMLElement) {
             document.activeElement.blur();
-        }
-        
-        // If we were in search, blur the search field
-        if (searchInputRef.current === document.activeElement) {
-            searchInputRef.current.blur();
         }
     }, []);
 
@@ -249,11 +233,6 @@ export const useKeyboardNavigation = ({
                     moveToPrevInvoice();
                     break;
 
-                // Search focus
-                case '/':
-                    focusSearch();
-                    break;
-
                 // Save
                 case 's':
                     handleSave();
@@ -292,7 +271,7 @@ export const useKeyboardNavigation = ({
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [
         mode, exitToNavigation, moveToNextInvoice, moveToPrevInvoice, 
-        focusSearch, handleSave, focusFirstField, switchToTabByNumber, moveToPrevTab, moveToNextTab
+        handleSave, focusFirstField, switchToTabByNumber, moveToPrevTab, moveToNextTab
     ]);
 
     return {
@@ -300,7 +279,6 @@ export const useKeyboardNavigation = ({
         mode,
         
         // Refs for components to use
-        searchInputRef,
         detailsContainerRef,
         
         // Event handlers for inputs

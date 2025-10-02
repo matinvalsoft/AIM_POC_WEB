@@ -6,12 +6,12 @@ import { CompactDeliveryTicketList } from "@/components/documents/compact-delive
 import { PDFViewer } from "@/components/documents/pdf-viewer";
 import { DocumentDetailsPanel } from "@/components/documents/document-details-panel";
 import { useDeliveryTickets } from "@/lib/airtable";
-import { logStatusChange, logFieldEdit } from "@/lib/airtable/activity-logger";
+// Activity logging removed - Activities table no longer exists
 import { useKeyboardNavigation } from "@/hooks/use-keyboard-navigation";
 import { KeyboardShortcutsHelp } from "@/components/keyboard-shortcuts-help";
 import { cx } from "@/utils/cx";
 import { hasBlockingIssues, sortInvoicesByPriority, validateInvoice, getMissingFieldsMessage } from "@/utils/invoice-validation";
-import type { DeliveryTicket } from "@/types/documents";
+import type { DeliveryTicket, Invoice, StoreReceiver } from "@/types/documents";
 
 export default function DeliveryTicketsPage() {
     const router = useRouter();
@@ -65,7 +65,7 @@ export default function DeliveryTicketsPage() {
                 default: return true;
             }
         })
-    );
+    ) as DeliveryTicket[]; // Cast since we know these are all delivery tickets
 
     // Handle save action - save the current edited document
     const handleKeyboardSave = () => {
@@ -91,7 +91,9 @@ export default function DeliveryTicketsPage() {
         }
     }, [filteredTickets, selectedTicketId]);
 
-    const handleTicketUpdate = async (updatedTicket: DeliveryTicket) => {
+    const handleTicketUpdate = async (updatedDocument: Invoice | DeliveryTicket | StoreReceiver) => {
+        // Cast to DeliveryTicket since we know this is the delivery tickets page
+        const updatedTicket = updatedDocument as DeliveryTicket;
         try {
             const originalTicket = deliveryTickets.find(ticket => ticket.id === updatedTicket.id);
             
@@ -109,15 +111,6 @@ export default function DeliveryTicketsPage() {
                     const newValue = updatedTicket[field as keyof DeliveryTicket];
                     
                     if (oldValue !== newValue) {
-                        await logFieldEdit(
-                            updatedTicket.id,
-                            updatedTicket.invoiceNumber,
-                            field,
-                            oldValue,
-                            newValue,
-                            'User', // TODO: Get actual user info
-                            `Field ${field} updated`
-                        );
                     }
                 }
             }
@@ -128,7 +121,8 @@ export default function DeliveryTicketsPage() {
     };
 
     // Status change handlers
-    const handleSendForApproval = async (ticket: DeliveryTicket) => {
+    const handleSendForApproval = async (document: Invoice | DeliveryTicket | StoreReceiver) => {
+        const ticket = document as DeliveryTicket;
         try {
             // Validate required fields before marking as reviewed
             const validation = validateInvoice(ticket);
@@ -142,90 +136,54 @@ export default function DeliveryTicketsPage() {
             await updateDeliveryTicket(ticket.id, { status: 'reviewed' });
             
             // Log the activity
-            await logStatusChange(
-                ticket.id,
-                ticket.invoiceNumber,
-                oldStatus,
-                'reviewed',
-                'User', // TODO: Get actual user info
-                'Delivery ticket marked as reviewed'
-            );
         } catch (err) {
             console.error('Failed to mark as reviewed:', err);
         }
     };
 
-    const handleApprove = async (ticket: DeliveryTicket) => {
+    const handleApprove = async (document: Invoice | DeliveryTicket | StoreReceiver) => {
+        const ticket = document as DeliveryTicket;
         try {
             const oldStatus = ticket.status;
             await updateDeliveryTicket(ticket.id, { status: 'approved' });
             
             // Log the activity
-            await logStatusChange(
-                ticket.id,
-                ticket.invoiceNumber,
-                oldStatus,
-                'approved',
-                'User', // TODO: Get actual user info
-                'Delivery ticket approved'
-            );
         } catch (err) {
             console.error('Failed to approve delivery ticket:', err);
         }
     };
 
-    const handleReject = async (ticket: DeliveryTicket) => {
+    const handleReject = async (document: Invoice | DeliveryTicket | StoreReceiver) => {
+        const ticket = document as DeliveryTicket;
         try {
             const oldStatus = ticket.status;
             await updateDeliveryTicket(ticket.id, { status: 'rejected' });
             
             // Log the activity
-            await logStatusChange(
-                ticket.id,
-                ticket.invoiceNumber,
-                oldStatus,
-                'rejected',
-                'User', // TODO: Get actual user info
-                'Delivery ticket rejected'
-            );
         } catch (err) {
             console.error('Failed to reject delivery ticket:', err);
         }
     };
 
-    const handleResendForApproval = async (ticket: DeliveryTicket) => {
+    const handleResendForApproval = async (document: Invoice | DeliveryTicket | StoreReceiver) => {
+        const ticket = document as DeliveryTicket;
         try {
             const oldStatus = ticket.status;
             await updateDeliveryTicket(ticket.id, { status: 'pending' });
             
             // Log the activity
-            await logStatusChange(
-                ticket.id,
-                ticket.invoiceNumber,
-                oldStatus,
-                'pending',
-                'User', // TODO: Get actual user info
-                'Delivery ticket re-marked as reviewed'
-            );
         } catch (err) {
             console.error('Failed to re-mark as reviewed:', err);
         }
     };
 
-    const handleReopen = async (ticket: DeliveryTicket) => {
+    const handleReopen = async (document: Invoice | DeliveryTicket | StoreReceiver) => {
+        const ticket = document as DeliveryTicket;
         try {
             const oldStatus = ticket.status;
             await updateDeliveryTicket(ticket.id, { status: 'open' });
             
             // Log the activity
-            await logStatusChange(
-                ticket.id,
-                ticket.invoiceNumber,
-                oldStatus,
-                'open',
-                'User', // TODO: Get actual user info
-                'Delivery ticket reopened'
-            );
         } catch (err) {
             console.error('Failed to reopen delivery ticket:', err);
         }

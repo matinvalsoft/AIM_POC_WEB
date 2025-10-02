@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
 /**
  * Helper functions for webhook management
  */
-export class WebhookManager {
+class WebhookManager {
   private client: ReturnType<typeof createAirtableClient>;
   private baseId: string;
 

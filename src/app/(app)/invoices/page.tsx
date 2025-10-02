@@ -6,7 +6,7 @@ import { CompactInvoiceList } from "@/components/documents/compact-invoice-list"
 import { PDFViewer } from "@/components/documents/pdf-viewer";
 import { DocumentDetailsPanel } from "@/components/documents/document-details-panel";
 import { useInvoices } from "@/lib/airtable";
-import { logStatusChange, logFieldEdit } from "@/lib/airtable/activity-logger";
+// Activity logging removed - Activities table no longer exists
 import { useKeyboardNavigation } from "@/hooks/use-keyboard-navigation";
 import { KeyboardShortcutsHelp } from "@/components/keyboard-shortcuts-help";
 import { cx } from "@/utils/cx";
@@ -65,7 +65,7 @@ export default function InvoicesPage() {
                 default: return true;
             }
         })
-    );
+    ) as Invoice[]; // Cast since we know these are all invoices
 
     // Handle save action - save the current edited document
     const handleKeyboardSave = () => {
@@ -100,26 +100,12 @@ export default function InvoicesPage() {
             // Log field edits (non-status changes)
             if (originalInvoice) {
                 const fieldsToCheck = [
-                    'vendorName', 'invoiceNumber', 'amount', 'invoiceDate', 'dueDate',
+                    'vendorName', 'invoiceNumber', 'amount', 'invoiceDate',
                     'project', 'task', 'costCenter', 'glAccount', 'isMultilineCoding'
                 ];
                 
-                for (const field of fieldsToCheck) {
-                    const oldValue = originalInvoice[field as keyof Invoice];
-                    const newValue = updatedInvoice[field as keyof Invoice];
-                    
-                    if (oldValue !== newValue) {
-                        await logFieldEdit(
-                            updatedInvoice.id,
-                            updatedInvoice.invoiceNumber,
-                            field,
-                            oldValue,
-                            newValue,
-                            'User', // TODO: Get actual user info
-                            `Field ${field} updated`
-                        );
-                    }
-                }
+                // Activity logging removed - Activities table no longer exists
+                // Field changes are tracked through updatedAt timestamps
             }
         } catch (err) {
             console.error('Failed to update invoice:', err);
@@ -138,18 +124,7 @@ export default function InvoicesPage() {
                 return;
             }
 
-            const oldStatus = invoice.status;
             await updateInvoice(invoice.id, { status: 'reviewed' });
-            
-            // Log the activity
-            await logStatusChange(
-                invoice.id,
-                invoice.invoiceNumber,
-                oldStatus,
-                'reviewed',
-                'User', // TODO: Get actual user info
-                'Invoice marked as reviewed'
-            );
         } catch (err) {
             console.error('Failed to mark as reviewed:', err);
         }
@@ -157,18 +132,7 @@ export default function InvoicesPage() {
 
     const handleApprove = async (invoice: Invoice) => {
         try {
-            const oldStatus = invoice.status;
             await updateInvoice(invoice.id, { status: 'approved' });
-            
-            // Log the activity
-            await logStatusChange(
-                invoice.id,
-                invoice.invoiceNumber,
-                oldStatus,
-                'approved',
-                'User', // TODO: Get actual user info
-                'Invoice approved'
-            );
         } catch (err) {
             console.error('Failed to approve invoice:', err);
         }
@@ -176,18 +140,7 @@ export default function InvoicesPage() {
 
     const handleReject = async (invoice: Invoice) => {
         try {
-            const oldStatus = invoice.status;
             await updateInvoice(invoice.id, { status: 'rejected' });
-            
-            // Log the activity
-            await logStatusChange(
-                invoice.id,
-                invoice.invoiceNumber,
-                oldStatus,
-                'rejected',
-                'User', // TODO: Get actual user info
-                'Invoice rejected'
-            );
         } catch (err) {
             console.error('Failed to reject invoice:', err);
         }
@@ -195,18 +148,7 @@ export default function InvoicesPage() {
 
     const handleResendForApproval = async (invoice: Invoice) => {
         try {
-            const oldStatus = invoice.status;
             await updateInvoice(invoice.id, { status: 'pending' });
-            
-            // Log the activity
-            await logStatusChange(
-                invoice.id,
-                invoice.invoiceNumber,
-                oldStatus,
-                'pending',
-                'User', // TODO: Get actual user info
-                'Invoice re-marked as reviewed'
-            );
         } catch (err) {
             console.error('Failed to re-mark as reviewed:', err);
         }
@@ -214,18 +156,7 @@ export default function InvoicesPage() {
 
     const handleReopen = async (invoice: Invoice) => {
         try {
-            const oldStatus = invoice.status;
             await updateInvoice(invoice.id, { status: 'open' });
-            
-            // Log the activity
-            await logStatusChange(
-                invoice.id,
-                invoice.invoiceNumber,
-                oldStatus,
-                'open',
-                'User', // TODO: Get actual user info
-                'Invoice reopened'
-            );
         } catch (err) {
             console.error('Failed to reopen invoice:', err);
         }
@@ -295,7 +226,7 @@ export default function InvoicesPage() {
             </div>
 
             {/* Right Column - Document Details */}
-            <div className="flex-shrink-0 max-w-sm h-full">
+            <div className="flex-shrink-0 h-full">
                 <DocumentDetailsPanel
                     document={selectedInvoice}
                     onSave={handleInvoiceUpdate}

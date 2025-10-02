@@ -249,7 +249,7 @@ function transformInvoiceForAirtable(mockInvoice) {
       'Status': mockInvoice.status,
       'Vendor Name': mockInvoice.vendorName,
       'Vendor Code': mockInvoice.vendorCode,
-      'Invoice Date': mockInvoice.invoiceDate.toISOString().split('T')[0], // YYYY-MM-DD format
+      'Date': mockInvoice.invoiceDate.toISOString().split('T')[0], // YYYY-MM-DD format
       'Due Date': mockInvoice.dueDate.toISOString().split('T')[0],
       'Amount': mockInvoice.amount,
       'Is Multiline Coding': mockInvoice.isMultilineCoding,

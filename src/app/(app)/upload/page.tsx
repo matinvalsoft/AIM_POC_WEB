@@ -13,6 +13,11 @@ interface UploadedFile {
     progress: number;
     failed?: boolean;
     type?: string;
+    isDuplicate?: boolean;
+    duplicateInfo?: any;
+    errorCode?: string;
+    errorDescription?: string;
+    errorLink?: string;
 }
 
 export default function UploadPage() {
@@ -71,9 +76,21 @@ export default function UploadPage() {
                 if (result.success) {
                     // Upload successful
                     setFiles(prev => prev.map(f => 
-                        f.id === uploadFile.id ? { ...f, progress: 100 } : f
+                        f.id === uploadFile.id ? { 
+                            ...f, 
+                            progress: 100,
+                            isDuplicate: result.isDuplicate,
+                            duplicateInfo: result.duplicateInfo,
+                            errorCode: result.airtableRecord?.fields?.['Error Code'],
+                            errorDescription: result.airtableRecord?.fields?.['Error Description'],
+                            errorLink: result.airtableRecord?.fields?.['Error Link']
+                        } : f
                     ));
                     console.log('File uploaded successfully:', result);
+                    
+                    if (result.isDuplicate) {
+                        console.warn('Duplicate file detected:', result.duplicateInfo);
+                    }
                 } else {
                     throw new Error(result.error || 'Upload failed');
                 }
@@ -184,6 +201,10 @@ export default function UploadPage() {
                                     size={file.size}
                                     progress={file.progress}
                                     failed={file.failed}
+                                    isDuplicate={file.isDuplicate}
+                                    errorCode={file.errorCode}
+                                    errorDescription={file.errorDescription}
+                                    errorLink={file.errorLink}
                                     onDelete={() => handleDelete(file.id)}
                                     onRetry={() => handleRetry(file.id)}
                                 />

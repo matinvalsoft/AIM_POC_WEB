@@ -17,21 +17,21 @@ import { LinksTab, RawContentTab } from "@/components/documents/shared-tabs";
 import { DialogTrigger, ModalOverlay, Modal, Dialog } from "@/components/application/modals/modal";
 import { useTeams } from "@/lib/airtable";
 import { useDocumentLinks } from "@/lib/airtable/linked-documents-hooks";
-import type { Invoice, DeliveryTicket, DocumentLink } from "@/types/documents";
+import type { Invoice, DeliveryTicket, DocumentLink, StoreReceiver } from "@/types/documents";
 import { INVOICE_STATUS } from "@/lib/airtable/schema-types";
 import { validateInvoice, getMissingFieldsMessage, isMultiLineMode } from "@/utils/invoice-validation";
 
 
 
 interface DocumentDetailsPanelProps {
-    document?: Invoice | DeliveryTicket;
+    document?: Invoice | DeliveryTicket | StoreReceiver;
     className?: string;
-    onSave?: (document: Invoice | DeliveryTicket) => void;
-    onSendForApproval?: (document: Invoice | DeliveryTicket) => void;
-    onApprove?: (document: Invoice | DeliveryTicket) => void;
-    onReject?: (document: Invoice | DeliveryTicket) => void;
-    onReopen?: (document: Invoice | DeliveryTicket) => void;
-    onResendForApproval?: (document: Invoice | DeliveryTicket) => void;
+    onSave?: (document: Invoice | DeliveryTicket | StoreReceiver) => void;
+    onSendForApproval?: (document: Invoice | DeliveryTicket | StoreReceiver) => void;
+    onApprove?: (document: Invoice | DeliveryTicket | StoreReceiver) => void;
+    onReject?: (document: Invoice | DeliveryTicket | StoreReceiver) => void;
+    onReopen?: (document: Invoice | DeliveryTicket | StoreReceiver) => void;
+    onResendForApproval?: (document: Invoice | DeliveryTicket | StoreReceiver) => void;
     onViewReason?: (document: Invoice | DeliveryTicket) => void;
     onViewInOracle?: (document: Invoice | DeliveryTicket) => void;
     onDelete?: (document: Invoice | DeliveryTicket) => void;
@@ -173,6 +173,7 @@ export const DocumentDetailsPanel = ({
     // Helpers for date formatting/parsing for DatePicker component
     const formatDateValue = (date: Date | undefined) => {
         if (!date) return null;
+        // Use local timezone consistently to avoid off-by-one day issues
         const y = date.getFullYear();
         const m = `${date.getMonth() + 1}`.padStart(2, '0');
         const d = `${date.getDate()}`.padStart(2, '0');
@@ -208,8 +209,7 @@ export const DocumentDetailsPanel = ({
         
         // Check all editable fields
         const fieldsToCheck: (keyof (Invoice | DeliveryTicket))[] = [
-            "vendorName", "invoiceNumber", "invoiceDate", "dueDate",
-            "erpAttribute1", "erpAttribute2", "erpAttribute3", "glAccount", "isMultilineCoding", "team"
+            "vendorName", "invoiceNumber", "invoiceDate", "glAccount", "team"
         ];
         
         // Check top-level fields
@@ -554,7 +554,7 @@ export const DocumentDetailsPanel = ({
 
     if (!document) {
         return (
-            <div className={cx("w-full max-w-sm border-l border-secondary bg-primary", className)}>
+            <div className={cx("border-l border-secondary bg-primary", className)} style={{ width: '320px', minWidth: '320px', maxWidth: '320px' }}>
                 <div className="flex flex-col items-center justify-center py-12 px-6">
                     <div className="text-4xl mb-3">📋</div>
                     <h3 className="text-lg font-medium text-primary mb-2">No Document Selected</h3>
@@ -566,7 +566,7 @@ export const DocumentDetailsPanel = ({
     const canEdit = currentDoc?.status === INVOICE_STATUS.OPEN || currentDoc?.status === INVOICE_STATUS.REJECTED;
 
     return (
-        <div ref={panelRef} className={cx("w-full max-w-sm border-l border-secondary bg-primary flex flex-col h-full overflow-hidden", className)}>
+        <div ref={panelRef} className={cx("border-l border-secondary bg-primary flex flex-col h-full overflow-hidden", className)} style={{ width: '320px', minWidth: '320px', maxWidth: '320px' }}>
             {/* Header */}
             <div className="px-6 py-4 border-b border-secondary flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
@@ -614,7 +614,7 @@ export const DocumentDetailsPanel = ({
                 </div>
 
                 {/* Content */}
-                <div ref={contentAreaRef} className="flex-1 overflow-y-auto min-h-0 w-full max-w-full" style={{ padding: '18px' }} data-keyboard-nav-container>
+                <div ref={contentAreaRef} className="flex-1 overflow-y-auto min-h-0 w-full" style={{ padding: '18px' }} data-keyboard-nav-container>
                     <TabPanel id="extracted" className="space-y-4">
                             <div>
                                 <label className="text-xs font-medium text-tertiary mb-1 block">Store Number</label>
@@ -704,11 +704,12 @@ export const DocumentDetailsPanel = ({
                                 <label className="text-xs font-medium text-tertiary mb-1 block">Date</label>
                                 <DatePicker 
                                     aria-label="Date picker"
-                                    value={formatDateValue(currentDoc?.dueDate)}
+                                    value={formatDateValue(currentDoc?.invoiceDate)}
                                     onChange={(value) => {
                                         if (value) {
-                                            const date = value.toDate('UTC');
-                                            updateField('dueDate', date);
+                                            // Use local timezone to match formatDateValue
+                                            const date = value.toDate(getLocalTimeZone());
+                                            updateField('invoiceDate', date);
                                         }
                                     }}
                                     isDisabled={!canEdit}

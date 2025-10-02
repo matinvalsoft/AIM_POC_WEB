@@ -10,25 +10,17 @@ export const INVOICE_FIELDS = {
   UPDATED_AT: 'Updated At',
   VENDOR_NAME: 'Vendor Name',
   VENDOR_CODE: 'Vendor Code',
-  INVOICE_DATE: 'Invoice Date',
-  DUE_DATE: 'Due Date',
+  INVOICE_DATE: 'Date',
   AMOUNT: 'Amount',
-  IS_MULTILINE_CODING: 'Is Multiline Coding',
-  ERP_ATTRIBUTE_1: 'ERP Attribute 1', // Previously "Project"
-  ERP_ATTRIBUTE_2: 'ERP Attribute 2', // Previously "Task"
-  ERP_ATTRIBUTE_3: 'ERP Attribute 3', // Previously "Cost Center"
   GL_ACCOUNT: 'GL Account',
-  RAW_TEXT_OCR: 'Raw Text OCR',
-  REJECTION_CODE: 'Rejection Code', // NEW field
+  DOCUMENT_RAW_TEXT: 'Document Raw Text',
+  REJECTION_CODE: 'Rejection Code',
   REJECTION_REASON: 'Rejection Reason',
-  DAYS_UNTIL_DUE: 'Days Until Due',
-  ACTIVITIES: 'Activities',
-  INVOICE_LINES: 'Invoice Lines',
   FILES: 'Files',
-  EMAILS: 'Emails',
   ATTACHMENTS: 'Attachments',
-  TEAM: 'Team', // NEW field
-  MISSING_FIELDS: 'Missing Fields' // Server-side validation field
+  TEAM: 'Team',
+  MISSING_FIELDS: 'Missing Fields', // Server-side validation field
+  FILE_RAW_TEXT: 'File Raw Text' // Lookup field
 } as const;
 
 export const DELIVERY_TICKET_FIELDS = {
@@ -39,70 +31,27 @@ export const DELIVERY_TICKET_FIELDS = {
   UPDATED_AT: 'Updated At',
   VENDOR_NAME: 'Vendor Name',
   VENDOR_CODE: 'Vendor Code',
-  INVOICE_DATE: 'Invoice Date',
-  DUE_DATE: 'Due Date',
+  INVOICE_DATE: 'Date',
   AMOUNT: 'Amount',
-  ERP_ATTRIBUTE_1: 'ERP Attribute 1',
-  ERP_ATTRIBUTE_2: 'ERP Attribute 2',
-  ERP_ATTRIBUTE_3: 'ERP Attribute 3',
   GL_ACCOUNT: 'GL Account',
   RAW_TEXT_OCR: 'Raw Text OCR',
   REJECTION_CODE: 'Rejection Code',
   REJECTION_REASON: 'Rejection Reason',
-  DAYS_UNTIL_DUE: 'Days Until Due',
-  ACTIVITIES: 'Activities',
   FILES: 'Files',
-  EMAILS: 'Emails',
   ATTACHMENTS: 'Attachments',
   TEAM: 'Team',
-  MISSING_FIELDS: 'Missing Fields' // Server-side validation field
-} as const;
-
-export const INVOICE_LINE_FIELDS = {
-  AUTO_NUMBER: 'Auto #',
-  INVOICE: 'Invoice',
-  LINE_NUMBER: 'Line Number',
-  DESCRIPTION: 'Description',
-  AMOUNT: 'Amount',
-  PROJECT: 'Project',
-  TASK: 'Task',
-  COST_CENTER: 'Cost Center',
-  GL_ACCOUNT: 'GL Account',
-  CREATED_AT: 'Created At',
-  UPDATED_AT: 'Updated At'
+  HAS_MISSING_FIELDS: 'Has Missing Fields', // Server-side validation field
+  FILE_RAW_TEXT: 'File Raw Text' // Lookup field
 } as const;
 
 // Export table names from schema
 export { TABLE_NAMES };
 
 /**
- * Transform Airtable invoice line record to DocumentLine
+ * Transform Airtable invoice record to Invoice
  */
-export function transformAirtableToInvoiceLine(record: AirtableRecord): DocumentLine {
+export function transformAirtableToInvoice(record: AirtableRecord): Invoice {
   const fields = record.fields;
-  
-  return {
-    id: record.id,
-    lineNumber: fields[INVOICE_LINE_FIELDS.LINE_NUMBER] || 0,
-    description: fields[INVOICE_LINE_FIELDS.DESCRIPTION] || '',
-    amount: fields[INVOICE_LINE_FIELDS.AMOUNT] || 0,
-    glAccount: fields[INVOICE_LINE_FIELDS.GL_ACCOUNT] || ''
-  };
-}
-
-/**
- * Transform Airtable invoice record with lines to Invoice
- */
-export function transformAirtableToInvoice(
-  record: AirtableRecord, 
-  lines: AirtableRecord[] = []
-): Invoice {
-  const fields = record.fields;
-  
-  // Transform invoice lines
-  const transformedLines: DocumentLine[] = lines.map(lineRecord => 
-    transformAirtableToInvoiceLine(lineRecord)
-  );
 
   // Parse dates
   const parseDate = (dateString: string | undefined) => {
@@ -114,7 +63,7 @@ export function transformAirtableToInvoice(
     const statusMap: Record<string, DocumentStatus> = {
       'new': 'open',  // Map 'new' to 'open'
       'open': 'open',
-      'reviewed': 'reviewed', // NEW status
+      'reviewed': 'reviewed',
       'pending': 'pending',
       'approved': 'approved',
       'rejected': 'rejected',
@@ -137,23 +86,16 @@ export function transformAirtableToInvoice(
     vendorCode: fields[INVOICE_FIELDS.VENDOR_CODE] || '',
     amount: fields[INVOICE_FIELDS.AMOUNT] || 0,
     invoiceDate: parseDate(fields[INVOICE_FIELDS.INVOICE_DATE]) || new Date(),
-    dueDate: parseDate(fields[INVOICE_FIELDS.DUE_DATE]),
-    erpAttribute1: fields[INVOICE_FIELDS.ERP_ATTRIBUTE_1] || '', // Previously "project"
-    erpAttribute2: fields[INVOICE_FIELDS.ERP_ATTRIBUTE_2] || '', // Previously "task"
-    erpAttribute3: fields[INVOICE_FIELDS.ERP_ATTRIBUTE_3] || '', // Previously "costCenter"
     glAccount: fields[INVOICE_FIELDS.GL_ACCOUNT] || '',
-    isMultilineCoding: fields[INVOICE_FIELDS.IS_MULTILINE_CODING] || false,
-    rawTextOcr: fields[INVOICE_FIELDS.RAW_TEXT_OCR] || '',
-    rejectionCode: fields[INVOICE_FIELDS.REJECTION_CODE] || '', // NEW field
+    rawTextOcr: fields[INVOICE_FIELDS.DOCUMENT_RAW_TEXT] || '',
+    rejectionCode: fields[INVOICE_FIELDS.REJECTION_CODE] || '',
     rejectionReason: fields[INVOICE_FIELDS.REJECTION_REASON] || '',
-    team: fields[INVOICE_FIELDS.TEAM] || [], // NEW field
-    lines: transformedLines,
-    linkedIds: [], // Initialize as empty array for now
+    team: fields[INVOICE_FIELDS.TEAM] || [],
+    linkedIds: [],
     
-    // New schema fields
-    attachments: fields[INVOICE_FIELDS.ATTACHMENTS] || [], // Email attachments from linked emails
+    // Attachments from Files table
+    attachments: fields[INVOICE_FIELDS.ATTACHMENTS] || [],
     files: fields[INVOICE_FIELDS.FILES] || [],
-    emails: fields[INVOICE_FIELDS.EMAILS] || [],
     
     // Additional computed fields
     createdAt: parseDate(fields[INVOICE_FIELDS.CREATED_AT]) || new Date(),
@@ -164,7 +106,7 @@ export function transformAirtableToInvoice(
 /**
  * Transform Invoice to Airtable record format
  */
-export function transformInvoiceToAirtable(invoice: Invoice): Record<string, any> {
+export function transformInvoiceToAirtable(invoice: Partial<Invoice>): Record<string, any> {
   const fields: Record<string, any> = {};
 
   // Basic fields
@@ -178,44 +120,19 @@ export function transformInvoiceToAirtable(invoice: Invoice): Record<string, any
   if (invoice.invoiceDate) {
     fields[INVOICE_FIELDS.INVOICE_DATE] = invoice.invoiceDate.toISOString().split('T')[0];
   }
-  if (invoice.dueDate) {
-    fields[INVOICE_FIELDS.DUE_DATE] = invoice.dueDate.toISOString().split('T')[0];
-  }
 
   // Coding fields
-  if (invoice.erpAttribute1) fields[INVOICE_FIELDS.ERP_ATTRIBUTE_1] = invoice.erpAttribute1;
-  if (invoice.erpAttribute2) fields[INVOICE_FIELDS.ERP_ATTRIBUTE_2] = invoice.erpAttribute2;
-  if (invoice.erpAttribute3) fields[INVOICE_FIELDS.ERP_ATTRIBUTE_3] = invoice.erpAttribute3;
   if (invoice.glAccount) fields[INVOICE_FIELDS.GL_ACCOUNT] = invoice.glAccount;
 
-  // Boolean fields
-  if (invoice.isMultilineCoding !== undefined) {
-    fields[INVOICE_FIELDS.IS_MULTILINE_CODING] = invoice.isMultilineCoding;
-  }
-
   // Text fields
-  if (invoice.rawTextOcr) fields[INVOICE_FIELDS.RAW_TEXT_OCR] = invoice.rawTextOcr;
+  if (invoice.rawTextOcr) fields[INVOICE_FIELDS.DOCUMENT_RAW_TEXT] = invoice.rawTextOcr;
+  if (invoice.rejectionCode) fields[INVOICE_FIELDS.REJECTION_CODE] = invoice.rejectionCode;
   if (invoice.rejectionReason) fields[INVOICE_FIELDS.REJECTION_REASON] = invoice.rejectionReason;
 
   // Team field (array of team IDs)
   if (invoice.team && invoice.team.length > 0) {
     fields[INVOICE_FIELDS.TEAM] = invoice.team;
   }
-
-  return fields;
-}
-
-/**
- * Transform DocumentLine to Airtable record format
- */
-export function transformInvoiceLineToAirtable(line: DocumentLine, invoiceId?: string): Record<string, any> {
-  const fields: Record<string, any> = {};
-
-  if (invoiceId) fields[INVOICE_LINE_FIELDS.INVOICE] = [invoiceId];
-  if (line.lineNumber !== undefined) fields[INVOICE_LINE_FIELDS.LINE_NUMBER] = line.lineNumber;
-  if (line.description) fields[INVOICE_LINE_FIELDS.DESCRIPTION] = line.description;
-  if (line.amount !== undefined) fields[INVOICE_LINE_FIELDS.AMOUNT] = line.amount;
-  if (line.glAccount) fields[INVOICE_LINE_FIELDS.GL_ACCOUNT] = line.glAccount;
 
   return fields;
 }

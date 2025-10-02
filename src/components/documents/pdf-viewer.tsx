@@ -4,11 +4,11 @@ import { useRef } from "react";
 import { cx } from "@/utils/cx";
 import type { Invoice } from "@/types/documents";
 import type { AirtableFile } from "@/lib/airtable/files-hooks";
-import type { AirtableEmail } from "@/lib/airtable/emails-hooks";
+
 import { AttachmentViewer } from "./attachment-viewer";
 import type { AirtableAttachment } from "@/lib/airtable/types";
 
-type ViewerDocument = Invoice | AirtableFile | AirtableEmail;
+type ViewerDocument = Invoice | AirtableFile | any;
 
 interface PDFViewerProps {
     document?: ViewerDocument;

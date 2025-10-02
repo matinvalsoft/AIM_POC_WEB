@@ -4,7 +4,8 @@ import type { ComponentProps, ComponentPropsWithRef } from "react";
 import { useId, useRef, useState } from "react";
 import type { FileIcon } from "@untitledui/file-icons";
 import { FileIcon as FileTypeIcon } from "@untitledui/file-icons";
-import { CheckCircle, Trash01, UploadCloud02, XCircle } from "@untitledui/icons";
+import { AlertTriangle, CheckCircle, Copy01, Trash01, UploadCloud02, XCircle } from "@untitledui/icons";
+import { getErrorCodeDefinition, getErrorDisplayName, getErrorIcon, getErrorDescription } from "@/lib/error-codes";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/base/buttons/button";
 import { ButtonUtility } from "@/components/base/buttons/button-utility";
@@ -247,6 +248,14 @@ export interface FileListItemProps {
     progress: number;
     /** Whether the file failed to upload. */
     failed?: boolean;
+    /** Whether the file is a duplicate. */
+    isDuplicate?: boolean;
+    /** Error code from Airtable. */
+    errorCode?: string;
+    /** Error description from Airtable. */
+    errorDescription?: string;
+    /** Error link from Airtable. */
+    errorLink?: string;
     /** The type of the file. */
     type?: ComponentProps<typeof FileIcon>["type"];
     /** The class name of the file list item. */
@@ -259,7 +268,7 @@ export interface FileListItemProps {
     onRetry?: () => void;
 }
 
-export const FileListItemProgressBar = ({ name, size, progress, failed, type, fileIconVariant, onDelete, onRetry, className }: FileListItemProps) => {
+export const FileListItemProgressBar = ({ name, size, progress, failed, isDuplicate, errorCode, errorDescription, errorLink, type, fileIconVariant, onDelete, onRetry, className }: FileListItemProps) => {
     const isComplete = progress === 100;
 
     return (
@@ -285,8 +294,19 @@ export const FileListItemProgressBar = ({ name, size, progress, failed, type, fi
                             <hr className="h-3 w-px rounded-t-full rounded-b-full border-none bg-border-primary" />
 
                             <div className="flex items-center gap-1">
-                                {isComplete && <CheckCircle className="size-4 stroke-[2.5px] text-fg-success-primary" />}
-                                {isComplete && <p className="text-sm font-medium text-success-primary">Complete</p>}
+                                {isComplete && !errorCode && <CheckCircle className="size-4 stroke-[2.5px] text-fg-success-primary" />}
+                                {isComplete && !errorCode && <p className="text-sm font-medium text-success-primary">Complete</p>}
+
+                                {isComplete && errorCode && (() => {
+                                    const ErrorIcon = getErrorIcon(errorCode);
+                                    const displayName = getErrorDisplayName(errorCode);
+                                    return (
+                                        <>
+                                            <ErrorIcon className="size-4 stroke-[2.5px] text-fg-error-primary" />
+                                            <p className="text-sm font-medium text-error-primary">{displayName}</p>
+                                        </>
+                                    );
+                                })()}
 
                                 {!isComplete && !failed && <UploadCloud02 className="stroke-[2.5px size-4 text-fg-quaternary" />}
                                 {!isComplete && !failed && <p className="text-sm font-medium text-quaternary">Uploading...</p>}
@@ -303,6 +323,46 @@ export const FileListItemProgressBar = ({ name, size, progress, failed, type, fi
                 {!failed && (
                     <div className="mt-1 w-full">
                         <ProgressBar labelPosition="right" max={100} min={0} value={progress} />
+                    </div>
+                )}
+
+                {errorCode && (
+                    <div className="mt-2 w-full">
+                        <div className="bg-error-50 border border-error-200 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                                {(() => {
+                                    const ErrorIcon = getErrorIcon(errorCode);
+                                    return <ErrorIcon className="size-4 stroke-[2.5px] text-fg-error-primary mt-0.5 shrink-0" />;
+                                })()}
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium text-error-800 mb-1">
+                                        {getErrorDisplayName(errorCode)}
+                                    </p>
+                                    <p className="text-sm text-error-700">
+                                        {getErrorDescription(errorCode)}
+                                    </p>
+                                    {errorLink && errorCode === 'DUPLICATE_FILE' && errorLink.startsWith('/') && (
+                                        <p className="text-xs text-warning-600 mt-1">
+                                            <a 
+                                                href={errorLink} 
+                                                className="underline hover:text-warning-800"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    window.location.href = errorLink;
+                                                }}
+                                            >
+                                                View original file
+                                            </a>
+                                        </p>
+                                    )}
+                                    {errorLink && errorCode === 'DUPLICATE_FILE' && !errorLink.startsWith('/') && (
+                                        <p className="text-xs text-warning-600 mt-1">
+                                            {errorLink}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

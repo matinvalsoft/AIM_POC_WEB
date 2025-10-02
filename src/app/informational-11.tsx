@@ -432,7 +432,7 @@ export const Informational11 = () => {
                                                             <p className="text-gray-600 mt-1">{selectedInvoice.invoiceNumber}</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-gray-600">Invoice Date</p>
+                                                            <p className="text-gray-600">Date</p>
                                                             <p className="font-medium">{new Date().toLocaleDateString()}</p>
                                                         </div>
                                                     </div>

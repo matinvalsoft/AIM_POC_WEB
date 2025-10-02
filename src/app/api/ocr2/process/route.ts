@@ -9,6 +9,7 @@ import { processPDFFromURL } from '@/lib/ocr2/orchestrator-clean';
 import { getOCR2Settings, validateSettings } from '@/lib/ocr2/config';
 import { createLogger } from '@/lib/ocr2/logger';
 import { ProcessFileRequest, ProcessFileResponse, AirtableUpdateError } from '@/lib/ocr2/types';
+import { setRecordError } from '@/lib/airtable/error-handler';
 
 // Force Node.js runtime for server-side processing
 export const runtime = 'nodejs';
@@ -102,23 +103,34 @@ function handleProcessingError(error: any, recordId: string): ProcessFileRespons
     stack: error instanceof Error ? error.stack : undefined
   });
 
-  // Try to update Airtable with error status
+  // Try to update Airtable with error status using error code system
   (async () => {
     try {
       const settings = getOCR2Settings();
-      const airtableClient = createAirtableClient(settings.airtable.baseId);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       
-      await airtableClient.updateRecords(settings.airtable.tableName, {
-        records: [{
-          id: recordId,
-          fields: {
-            Status: 'Error',
-            'Error Message': error instanceof Error ? error.message : String(error),
-            'Processed Date': new Date().toISOString().split('T')[0],
-          }
-        }],
-        typecast: true
+      // Determine error code based on error type
+      let errorCode: 'OCR_FAILED' | 'PDF_CORRUPTED' | 'PROCESSING_ERROR' | 'TIMEOUT_ERROR' = 'OCR_FAILED';
+      
+      // Check for specific error patterns
+      if (errorMessage.toLowerCase().includes('corrupt') || 
+          errorMessage.toLowerCase().includes('invalid pdf') ||
+          errorMessage.toLowerCase().includes('malformed')) {
+        errorCode = 'PDF_CORRUPTED';
+      } else if (errorMessage.toLowerCase().includes('timeout') ||
+                 errorMessage.toLowerCase().includes('timed out')) {
+        errorCode = 'TIMEOUT_ERROR';
+      } else if (!errorMessage.toLowerCase().includes('ocr')) {
+        errorCode = 'PROCESSING_ERROR';
+      }
+      
+      await setRecordError({
+        recordId,
+        errorCode,
+        baseId: settings.airtable.baseId
       });
+      
+      logger.info('Updated record with error code', { recordId, errorCode });
     } catch (updateError) {
       logger.error('Failed to update record with error status', { recordId, updateError });
     }

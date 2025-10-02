@@ -1,9 +1,12 @@
 /**
  * Duplicate detection utilities for Files and Email processing
+ * Updated to use file hash-based detection
  */
 
 import type { AirtableFile } from "@/lib/airtable/files-hooks";
-import type { AirtableEmail } from "@/lib/airtable/emails-hooks";
+import { checkFileHashDuplicate } from "@/lib/duplicate-detection";
+import { compareHashes } from "./file-hash";
+
 
 export interface DuplicateResult {
     isDuplicate: boolean;
@@ -22,12 +25,23 @@ export interface CandidateDocument {
 
 /**
  * Detect if a file is a duplicate of existing files
+ * Primary method: File hash comparison (most reliable)
+ * Fallback: Metadata-based detection for legacy files
  */
 export function detectFileDuplicates(
     file: AirtableFile, 
-    existingFiles: AirtableFile[]
+    existingFiles: AirtableFile[],
+    baseId?: string
 ): DuplicateResult {
-    // Whole-file duplicate detection
+    // Primary: Hash-based duplicate detection (most reliable)
+    if (file.fileHash) {
+        const hashDuplicate = findHashDuplicate(file, existingFiles);
+        if (hashDuplicate.isDuplicate) {
+            return hashDuplicate;
+        }
+    }
+
+    // Fallback: Metadata-based duplicate detection for files without hash
     const wholeFileDuplicate = findWholeFileDuplicate(file, existingFiles);
     if (wholeFileDuplicate.isDuplicate) {
         return wholeFileDuplicate;
@@ -43,6 +57,41 @@ export function detectFileDuplicates(
         isDuplicate: false,
         confidence: 0,
         reason: 'No duplicates detected'
+    };
+}
+
+/**
+ * Find hash-based duplicates (most reliable method)
+ */
+function findHashDuplicate(
+    file: AirtableFile,
+    existingFiles: AirtableFile[]
+): DuplicateResult {
+    if (!file.fileHash) {
+        return {
+            isDuplicate: false,
+            confidence: 0,
+            reason: 'No file hash available for comparison'
+        };
+    }
+
+    for (const existing of existingFiles) {
+        if (existing.id === file.id) continue;
+        
+        if (existing.fileHash && compareHashes(file.fileHash, existing.fileHash)) {
+            return {
+                isDuplicate: true,
+                duplicateOf: existing.id,
+                confidence: 1.0,
+                reason: `Exact file hash match with "${existing.name}"`
+            };
+        }
+    }
+
+    return {
+        isDuplicate: false,
+        confidence: 0,
+        reason: 'No matching file hash found'
     };
 }
 
@@ -182,8 +231,8 @@ export function generateDocumentCandidates(
  * Detect duplicate emails based on message content and metadata
  */
 export function detectEmailDuplicates(
-    email: AirtableEmail,
-    existingEmails: AirtableEmail[]
+    email: any,
+    existingEmails: any[]
 ): DuplicateResult {
     for (const existing of existingEmails) {
         if (existing.id === email.id) continue;

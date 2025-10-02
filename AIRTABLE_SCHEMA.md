@@ -11,6 +11,7 @@ This document provides comprehensive documentation of the current Airtable schem
 - **FIELD RENAMES**: Project/Task/Cost Center → ERP Attribute 1/2/3
 - **NEW FILE STATUS**: "Processing" status added
 - **ENHANCED ERROR TRACKING**: New error fields in Files table
+- **FILE HASH FIELD**: SHA-256 hash for duplicate detection
 
 ## Tables Overview
 
@@ -21,7 +22,7 @@ The database consists of **6 tables** that work together to manage invoice proce
 | [Invoices](#invoices-table) | Main invoice records | Invoice Number | ✅ NEW "reviewed" status, ERP attributes, team assignment |
 | [Invoice Lines](#invoice-lines-table) | Line-item details for invoices | Auto # | No changes |
 | [Activities](#activities-table) | Audit trail and workflow tracking | Auto # | No changes |
-| [Files](#files-table) | Document file management | Name | ✅ NEW "processing" status, error tracking fields |
+| [Files](#files-table) | Document file management | Name | ✅ NEW "processing" status, error tracking fields, file hash |
 | [Emails](#emails-table) | Email communication tracking | Subject | No changes |
 | [Teams](#teams-table) | Team management | Name | ✅ **NEW TABLE** |
 
@@ -38,7 +39,7 @@ The database consists of **6 tables** that work together to manage invoice proce
 | Status | `fld7KzLACPWK7YE5S` | singleSelect | ✅ | Workflow status (6 values) |
 | Vendor Name | `fldwXyrC93rysGzrJ` | singleLineText | | Supplier/vendor name |
 | Vendor Code | `fldPWCklYpVUfiwAz` | singleLineText | | Internal vendor code |
-| Invoice Date | `fldFd1vxXxxThsdAk` | date | | Date on the invoice |
+| Date | `fldFd1vxXxxThsdAk` | date | | Date on the invoice |
 | Due Date | `fldO7mkSkLyJfckKd` | date | | Payment due date |
 | Amount | `fldPiog487BPfs1gE` | currency | | Total invoice amount (USD) |
 
@@ -173,6 +174,8 @@ The database consists of **6 tables** that work together to manage invoice proce
 | Source | `fld5bJlx5WszQ4c1u` | singleSelect | Email or Upload |
 | Status | `fld9ouHowI4sch0n0` | singleSelect | Processing status |
 | Pages | `fldd196VlH2J9np59` | number | Number of pages |
+| Raw Text | `fldqYhVrJ09KBnVLk` | multilineText | OCR extracted text content |
+| **File Hash** 🆕 | `fldbYXg99PG8IVk0c` | multilineText | SHA-256 hash for duplicate detection |
 
 ### 🆕 Error Tracking Fields (NEW)
 

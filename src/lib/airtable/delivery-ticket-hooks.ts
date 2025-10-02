@@ -70,7 +70,7 @@ export function useDeliveryTickets(options: UseDeliveryTicketsOptions = {}): Use
       queryParams.append('pageSize', '50');
 
       // Fetch delivery tickets
-      const response = await fetch(`/api/airtable/Delivery%20Ticket?${queryParams}`);
+      const response = await fetch(`/api/airtable/Delivery%20Tickets?${queryParams}`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch delivery tickets: ${response.status}`);
@@ -124,7 +124,7 @@ export function useDeliveryTickets(options: UseDeliveryTicketsOptions = {}): Use
     try {
       const airtableFields = transformDeliveryTicketToAirtable(updates);
       
-      const response = await fetch(`/api/airtable/Delivery%20Ticket`, {
+      const response = await fetch(`/api/airtable/Delivery%20Tickets`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -157,7 +157,7 @@ export function useDeliveryTickets(options: UseDeliveryTicketsOptions = {}): Use
     try {
       const airtableFields = transformDeliveryTicketToAirtable(ticket);
       
-      const response = await fetch(`/api/airtable/Delivery%20Ticket`, {
+      const response = await fetch(`/api/airtable/Delivery%20Tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields: airtableFields }),
@@ -233,7 +233,7 @@ export function useDeliveryTicketCounts() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/airtable/Delivery%20Ticket?baseId=${BASE_ID}&fields=Status`);
+      const response = await fetch(`/api/airtable/Delivery%20Tickets?baseId=${BASE_ID}&fields=Status`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);

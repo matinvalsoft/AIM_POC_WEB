@@ -53,7 +53,7 @@ export function getRequiredFields(invoice: Invoice | DeliveryTicket): Array<{key
         { key: 'vendorName', label: 'Vendor Name', value: invoice.vendorName },
         { key: 'vendorCode', label: 'Vendor Code', value: invoice.vendorCode },
         { key: 'invoiceNumber', label: 'Invoice #', value: invoice.invoiceNumber },
-        { key: 'invoiceDate', label: 'Invoice Date', value: invoice.invoiceDate },
+        { key: 'invoiceDate', label: 'Date', value: invoice.invoiceDate },
     ];
 
     // Add team field for both invoices and delivery tickets

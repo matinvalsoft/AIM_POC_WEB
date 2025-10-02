@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Select } from "@/components/base/select/select";
 import { InvoiceCodingInterface } from "@/components/documents/invoice-coding-interface";
 import { useInvoices } from "@/lib/airtable";
-import { logCodingChange } from "@/lib/airtable/activity-logger";
+// Activity logging removed - Activities table no longer exists
 import type { Invoice } from "@/types/documents";
 
 export default function CodingDemoPage() {
@@ -27,7 +27,7 @@ export default function CodingDemoPage() {
   const invoiceOptions = invoices.map(invoice => ({
     id: invoice.id,
     label: `${invoice.invoiceNumber} - ${invoice.vendorName}`,
-    supportingText: `$${invoice.amount.toFixed(2)} | ${invoice.lines?.length || 0} line${(invoice.lines?.length || 0) !== 1 ? 's' : ''}`,
+    supportingText: `$${invoice.amount.toFixed(2)}`,
   }));
 
   const handleCodingChange = async (invoiceCoding?: any, lineCoding?: any) => {
@@ -38,26 +38,13 @@ export default function CodingDemoPage() {
       const updates: Partial<Invoice> = {};
       
       if (invoiceCoding) {
-        if (invoiceCoding.project !== undefined) updates.project = invoiceCoding.project;
-        if (invoiceCoding.task !== undefined) updates.task = invoiceCoding.task;
-        if (invoiceCoding.costCenter !== undefined) updates.costCenter = invoiceCoding.costCenter;
         if (invoiceCoding.glAccount !== undefined) updates.glAccount = invoiceCoding.glAccount;
-        if (invoiceCoding.isMultilineCoding !== undefined) updates.isMultilineCoding = invoiceCoding.isMultilineCoding;
       }
       
       await updateInvoice(selectedInvoice.id, updates);
       console.log("Successfully updated invoice coding:", updates);
       
       // Log the coding change
-      if (Object.keys(updates).length > 0) {
-        await logCodingChange(
-          selectedInvoice.id,
-          selectedInvoice.invoiceNumber,
-          updates,
-          'User', // TODO: Get actual user info
-          'Invoice coding updated via demo interface'
-        );
-      }
       
       // TODO: Handle line-level coding updates when needed
       if (lineCoding) {
@@ -65,13 +52,6 @@ export default function CodingDemoPage() {
         // This would require additional API calls to update invoice lines
         
         // Log line coding changes if implemented
-        await logCodingChange(
-          selectedInvoice.id,
-          selectedInvoice.invoiceNumber,
-          { lineCoding },
-          'User', // TODO: Get actual user info
-          'Line-level coding updated via demo interface'
-        );
       }
       
     } catch (err) {
@@ -169,8 +149,8 @@ export default function CodingDemoPage() {
                 <span className="ml-2 text-tertiary capitalize">{selectedInvoice.status}</span>
               </div>
               <div>
-                <span className="font-medium text-secondary">Lines:</span>
-                <span className="ml-2 text-tertiary">{selectedInvoice.lines?.length || 0}</span>
+                <span className="font-medium text-secondary">Amount:</span>
+                <span className="ml-2 text-tertiary">{selectedInvoice.amount.toFixed(2)}</span>
               </div>
             </div>
           </div>

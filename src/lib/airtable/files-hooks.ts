@@ -22,6 +22,10 @@ export interface AirtableFile {
     activity?: string[];
     relatedEmails?: string[];
     attachments?: AirtableAttachment[]; // File attachments from Airtable
+    fileHash?: string; // SHA-256 hash for duplicate detection
+    errorCode?: string; // Error Code from Airtable
+    errorDescription?: string; // Error Description from Airtable
+    errorLink?: string; // Error Link from Airtable
     // Computed fields
     isLinked: boolean; // Calculated field based on relationships
     createdAt?: Date;
@@ -78,6 +82,10 @@ function transformAirtableRecord(record: any): AirtableFile {
     // Calculate isLinked based on non-email document links (invoices, POs, etc.)
     const isLinked = relatedInvoices.length > 0;
     
+    // Check if this is a duplicate based on Error Code field
+    const errorCode = record.fields['Error Code'] || '';
+    const isDuplicate = errorCode === 'DUPLICATE_FILE';
+    
     return {
         id: record.id,
         name: record.fields['Name'] || '',
@@ -85,12 +93,16 @@ function transformAirtableRecord(record: any): AirtableFile {
         source: record.fields['Source'] || 'Upload',
         status: record.fields['Status'] || 'Queued',
         pages: record.fields['Pages'] || undefined,
-        isDuplicate: false, // This field was removed from schema
+        isDuplicate: isDuplicate, // Now based on Error Code field
         duplicateOf: [], // This field was removed from schema
         relatedInvoices,
         activity: record.fields['Activity'] || [],
         relatedEmails,
         attachments: record.fields['Attachments'] || [], // File attachments from Airtable
+        fileHash: record.fields['File Hash'] || undefined, // SHA-256 hash for duplicate detection
+        errorCode: errorCode,
+        errorDescription: record.fields['Error Description'] || undefined,
+        errorLink: record.fields['Error Link'] || undefined,
         isLinked,
         createdAt: record.createdTime ? new Date(record.createdTime) : undefined,
         updatedAt: record.fields['Modified At'] ? new Date(record.fields['Modified At']) : undefined,

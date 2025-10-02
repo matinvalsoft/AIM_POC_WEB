@@ -160,7 +160,7 @@ scripts/
 | Updated At | fldoRVUbO4liVHf9b | lastModifiedTime | Auto-updated timestamp | 2025-08-18T14:20:11Z |
 | Vendor Name | fldwXyrC93rysGzrJ | singleLineText | Supplier name | "Freelance Cover Artist LLC" |
 | Vendor Code | fldPWCklYpVUfiwAz | singleLineText | Supplier identifier | "FCA001" |
-| Invoice Date | fldFd1vxXxxThsdAk | date | Invoice issue date | 2025-08-15 |
+| Date | fldFd1vxXxxThsdAk | date | Invoice issue date | 2025-08-15 |
 | Due Date | fldO7mkSkLyJfckKd | date | Payment due date | 2025-09-14 |
 | Amount | fldPiog487BPfs1gE | currency | Total invoice amount | $1,200.00 |
 | Is Multiline Coding | fldMEVH80OGmzoO8S | checkbox | Line-level coding flag | true/false |
@@ -244,6 +244,7 @@ scripts/
 | Source | fld5bJlx5WszQ4c1u | singleSelect | How document was received | "Email", "Upload" |
 | Status | fld9ouHowI4sch0n0 | singleSelect | Processing status | "Queued", "Processed", "Attention" |
 | Pages | fldd196VlH2J9np59 | number | Number of pages in document | 3 |
+| **File Hash** 🆕 | fldbYXg99PG8IVk0c | multilineText | SHA-256 hash for duplicate detection | "a1b2c3d4e5f6..." |
 | Is Duplicate | fldy1RbkW5haWhXFM | checkbox | Whether document is a duplicate | true/false |
 | Duplicate Of | fld6LnUTFPP6crIAI | singleLineText | ID or name of original file record | "recABCD123" |
 | Invoices | fldkuHPgcgEa3m7rN | multipleRecordLinks | Links to invoice records | → Invoices table |

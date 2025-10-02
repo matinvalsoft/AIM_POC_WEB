@@ -6,13 +6,11 @@ import { Button } from "@/components/base/buttons/button";
 import { X } from "@untitledui/icons";
 import { cx } from "@/utils/cx";
 import { PDFViewer } from "@/components/documents/pdf-viewer";
-import { HTMLEmailViewer } from "@/components/documents/html-email-viewer";
 import { DocumentDetailsPanel } from "@/components/documents/document-details-panel";
-import { EmailDetailsPanel } from "@/components/documents/email-details-panel";
+// Email components removed - Emails table no longer exists
 import { FileDetailsPanel } from "@/components/documents/file-details-panel";
 import type { Invoice } from "@/types/documents";
 import type { AirtableFile } from "@/lib/airtable/files-hooks";
-import type { AirtableEmail } from "@/lib/airtable/emails-hooks";
 
 interface ViewItemModalProps {
     item: {
@@ -21,7 +19,7 @@ interface ViewItemModalProps {
         type: string;
     };
     // Full document data for proper viewing
-    documentData?: Invoice | AirtableFile | AirtableEmail;
+    documentData?: Invoice | AirtableFile;
     trigger?: React.ReactNode;
     className?: string;
 }
@@ -32,11 +30,7 @@ const isInvoice = (doc: any): doc is Invoice => {
 };
 
 const isFile = (doc: any): doc is AirtableFile => {
-    return doc && 'name' in doc && 'uploadDate' in doc && !('subject' in doc);
-};
-
-const isEmail = (doc: any): doc is AirtableEmail => {
-    return doc && 'subject' in doc && 'fromEmail' in doc;
+    return doc && 'name' in doc && 'uploadDate' in doc;
 };
 
 export const ViewItemModal = ({ item, documentData, trigger, className }: ViewItemModalProps) => {
@@ -44,7 +38,6 @@ export const ViewItemModal = ({ item, documentData, trigger, className }: ViewIt
     const [activeTab, setActiveTab] = useState(() => {
         // Set appropriate default tab based on document type
         if (isInvoice(documentData)) return 'extracted';
-        if (isEmail(documentData)) return 'overview'; 
         if (isFile(documentData)) return 'overview';
         return 'overview';
     });
@@ -101,17 +94,10 @@ export const ViewItemModal = ({ item, documentData, trigger, className }: ViewIt
                                 <div className="flex-1 flex overflow-hidden">
                                     {/* Left: Viewer (70% width, maximized) */}
                                     <div className="w-[70%] border-r border-gray-200 flex flex-col">
-                                        {isEmail(documentData) ? (
-                                            <HTMLEmailViewer 
-                                                email={documentData} 
-                                                className="h-full"
-                                            />
-                                        ) : (
-                                            <PDFViewer 
-                                                document={documentData || undefined} 
-                                                className="h-full"
-                                            />
-                                        )}
+                                        <PDFViewer 
+                                            document={documentData || undefined} 
+                                            className="h-full"
+                                        />
                                     </div>
 
                                     {/* Right: Details Panel (30% width) */}
@@ -119,13 +105,6 @@ export const ViewItemModal = ({ item, documentData, trigger, className }: ViewIt
                                         {isInvoice(documentData) ? (
                                             <DocumentDetailsPanel 
                                                 document={documentData} 
-                                                className="h-full"
-                                                activeTab={activeTab}
-                                                onTabChange={setActiveTab}
-                                            />
-                                        ) : isEmail(documentData) ? (
-                                            <EmailDetailsPanel 
-                                                email={documentData} 
                                                 className="h-full"
                                                 activeTab={activeTab}
                                                 onTabChange={setActiveTab}

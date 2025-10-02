@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ListBox, ListBoxItem, type ListBoxItemProps } from "react-aria-components";
-import { SearchLg, AlertTriangle, ChevronDown, FilterLines, File01, Mail01, Upload01, Link01, FileCheck02, Copy03, Copy07, AlertCircle, LinkBroken01 } from "@untitledui/icons";
-import { Input } from "@/components/base/input/input";
+import { AlertTriangle, ChevronDown, FilterLines, File01, Mail01, Upload01, Link01, FileCheck02, Copy03, Copy07, AlertCircle, LinkBroken01 } from "@untitledui/icons";
+import { getErrorCodeDefinition, getErrorDisplayName, getErrorIcon, getErrorColor, hasErrorCode } from "@/lib/error-codes";
 import { Badge } from "@/components/base/badges/badges";
 import { Dropdown } from "@/components/base/dropdown/dropdown";
 import { ButtonUtility } from "@/components/base/buttons/button-utility";
@@ -13,8 +12,8 @@ import { FILE_STATUS } from "@/lib/airtable/schema-types";
 
 // Helper function to check if a file has blocking issues
 const hasBlockingIssues = (file: AirtableFile) => {
-    // Files need attention if they're in attention state or are duplicates
-    return file.status === FILE_STATUS.ATTENTION || file.isDuplicate;
+    // Files need attention if they're in attention state or have error codes
+    return hasErrorCode(file.errorCode) || file.status === FILE_STATUS.ATTENTION;
 };
 
 interface CompactFilesListProps {
@@ -30,15 +29,29 @@ interface CompactFilesListProps {
 const FileItem = ({ value, className, ...otherProps }: ListBoxItemProps<AirtableFile>) => {
     if (!value) return null;
 
-    const getStatusColor = (status: AirtableFile['status']) => {
+    const getStatusColor = (status: AirtableFile['status'], errorCode?: string): 'success' | 'warning' | 'error' | 'gray' => {
+        // If there's an error code, use its color
+        if (errorCode) {
+            const errorDef = getErrorCodeDefinition(errorCode);
+            if (errorDef) return errorDef.color;
+        }
+        
         switch (status) {
             case 'Processed': return 'success';
             case 'Processing': return 'warning';
             case 'Queued': return 'gray';
             case 'Attention': return 'warning';
-            case 'Error': return 'error';
             default: return 'gray';
         }
+    };
+
+    const getStatusDisplayName = (status: AirtableFile['status'], errorCode?: string) => {
+        // If there's an error code, use its display name
+        if (errorCode) {
+            return getErrorDisplayName(errorCode);
+        }
+        
+        return status;
     };
 
     const getSourceIcon = (source: AirtableFile['source']) => {
@@ -99,12 +112,15 @@ const FileItem = ({ value, className, ...otherProps }: ListBoxItemProps<Airtable
                 </span>
                 <div className="flex items-center gap-1 flex-shrink-0">
                     {shouldShowUnlinkedIcon && (
-                        <LinkBroken01 className="w-4 h-4 text-tertiary" title="Not linked to documents" />
+                        <LinkBroken01 className="w-4 h-4 text-tertiary" />
                     )}
-                    {value.isDuplicate ? (
-                        <Copy07 className="w-4 h-4 text-fg-error-primary" title="Duplicate file" />
+                    {value.errorCode ? (
+                        (() => {
+                            const ErrorIcon = getErrorIcon(value.errorCode);
+                            return <ErrorIcon className="w-4 h-4 text-fg-error-primary" />;
+                        })()
                     ) : hasBlockingIssues(value) && (
-                        <AlertTriangle className="w-4 h-4 text-fg-warning-primary" title="Needs attention" />
+                        <AlertTriangle className="w-4 h-4 text-fg-error-primary" />
                     )}
                 </div>
             </div>
@@ -121,8 +137,8 @@ const FileItem = ({ value, className, ...otherProps }: ListBoxItemProps<Airtable
                 
                 {/* Status Badge */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge size="sm" color={getStatusColor(value.status)} type="color">
-                        {value.status}
+                    <Badge size="sm" color={getStatusColor(value.status, value.errorCode)} type="color">
+                        {getStatusDisplayName(value.status, value.errorCode)}
                     </Badge>
                 </div>
             </div>
@@ -139,7 +155,6 @@ export const CompactFilesList = ({
     onSubViewChange,
     keyboardNav
 }: CompactFilesListProps) => {
-    const [searchQuery, setSearchQuery] = useState("");
 
     const subViews = [
         { id: 'all', label: 'All', count: files.length },
@@ -195,19 +210,14 @@ export const CompactFilesList = ({
             return a.name.localeCompare(b.name);
         });
 
-    // Apply only search filtering if we have a search query
-    const finalFiles = baseFiles.filter(file => {
-        // Apply search filter
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return file.name.toLowerCase().includes(query);
-    });
+    // Use the base files directly without search filtering
+    const finalFiles = baseFiles;
 
     return (
         <div className="w-80 max-w-xs border-r border-secondary bg-primary flex flex-col flex-shrink-0 h-full">
             {/* Header */}
             <div className="px-4 py-4 border-b border-secondary flex-shrink-0">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between" style={{marginBottom: 0}}>
                     <div className="flex items-center gap-2">
                         <h2 className="text-lg font-semibold text-primary">
                             Files
@@ -255,17 +265,6 @@ export const CompactFilesList = ({
                     </div>
                 )}
                 
-                {/* Search */}
-                <Input
-                    ref={keyboardNav?.searchInputRef}
-                    icon={SearchLg}
-                    placeholder="Search files"
-                    size="sm"
-                    value={searchQuery}
-                    onChange={(value) => setSearchQuery(String(value ?? ""))}
-                    onFocus={keyboardNav?.handleInputFocus}
-                    onBlur={keyboardNav?.handleInputBlur}
-                />
             </div>
 
             {/* Files List */}
@@ -289,7 +288,7 @@ export const CompactFilesList = ({
                         <div className="text-6xl mb-3">📁</div>
                         <h3 className="text-sm font-medium text-secondary mb-1">No files found</h3>
                         <p className="text-xs text-tertiary text-center">
-                            {searchQuery ? "Try adjusting your search" : "No files available"}
+                            No files available
                         </p>
                     </div>
                 )}

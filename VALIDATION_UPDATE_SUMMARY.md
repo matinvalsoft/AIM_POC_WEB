@@ -42,7 +42,7 @@ Updated the invoice validation system to use server-side validation from Airtabl
 The "Missing Fields" field in Airtable is a **formula field** that:
 - Returns an empty string if all required fields are present
 - Returns a comma-separated list of missing field names if any are missing
-- Example: `"Vendor Code, Amount"` or `"Invoice Date, Team, Invoice Number"`
+- Example: `"Vendor Code, Amount"` or `"Date, Team, Invoice Number"`
 
 ### Frontend Side
 1. Data is fetched from Airtable with the formula field value

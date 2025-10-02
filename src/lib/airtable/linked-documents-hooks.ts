@@ -15,6 +15,7 @@ export interface LinkedDocuments {
     files: AirtableFile[];
     emails: any[]; // Deprecated - emails functionality was removed
     invoices: any[]; // TODO: Import proper Invoice type
+    deliveryTickets: any[]; // TODO: Import proper DeliveryTicket type
     loading: boolean;
     error: string | null;
 }
@@ -68,6 +69,27 @@ function transformEmailRecord(record: any): any {
 }
 
 /**
+ * Transform Airtable Delivery Ticket record for linked documents
+ */
+function transformDeliveryTicketRecord(record: any): any {
+    return {
+        id: record.id,
+        invoiceNumber: record.fields['Invoice Number'] || '',
+        vendorName: record.fields['Vendor'] || '',
+        vendorCode: record.fields['Vendor Code'] || '',
+        amount: record.fields['Amount'] || 0,
+        invoiceDate: record.fields['Date'] ? new Date(record.fields['Date']) : new Date(),
+        status: record.fields['Status'] || 'New',
+        project: record.fields['Project (ISBN)'] || undefined,
+        task: record.fields['Task'] || undefined,
+        costCenter: record.fields['Cost Center'] || undefined,
+        glAccount: record.fields['GL Account'] || undefined,
+        createdAt: record.createdTime ? new Date(record.createdTime) : undefined,
+        updatedAt: record.fields['Last Modified'] ? new Date(record.fields['Last Modified']) : undefined,
+    };
+}
+
+/**
  * Transform Airtable Invoice record for linked documents
  */
 function transformInvoiceRecord(record: any): any {
@@ -77,8 +99,7 @@ function transformInvoiceRecord(record: any): any {
         vendorName: record.fields['Vendor'] || '',
         vendorCode: record.fields['Vendor Code'] || '',
         amount: record.fields['Amount'] || 0,
-        invoiceDate: record.fields['Invoice Date'] ? new Date(record.fields['Invoice Date']) : new Date(),
-        dueDate: record.fields['Due Date'] ? new Date(record.fields['Due Date']) : undefined,
+        invoiceDate: record.fields['Date'] ? new Date(record.fields['Date']) : new Date(),
         status: record.fields['Status'] || 'New',
         project: record.fields['Project (ISBN)'] || undefined,
         task: record.fields['Task'] || undefined,
@@ -96,6 +117,7 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
     const [files, setFiles] = useState<AirtableFile[]>([]);
     const [emails, setEmails] = useState<any[]>([]);
     const [invoices, setInvoices] = useState<any[]>([]); // TODO: Import proper Invoice type
+    const [deliveryTickets, setDeliveryTickets] = useState<any[]>([]); // TODO: Import proper DeliveryTicket type
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -114,10 +136,6 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
                     break;
                 case 'delivery-ticket':
                     currentDocResponse = await fetch(`/api/airtable/Delivery%20Tickets?baseId=${BASE_ID}&pageSize=100`);
-                    break;
-                case 'email':
-                    // Emails table was removed - return empty response
-                    currentDocResponse = { ok: true, json: () => Promise.resolve({ records: [] }) };
                     break;
                 case 'file':
                     currentDocResponse = await fetch(`/api/airtable/Files?baseId=${BASE_ID}&pageSize=100`);
@@ -147,6 +165,7 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
             let linkedFileIds: string[] = [];
             let linkedEmailIds: string[] = [];
             let linkedInvoiceIds: string[] = [];
+            let linkedDeliveryTicketIds: string[] = [];
 
             switch (docType) {
                 case 'invoice':
@@ -154,14 +173,15 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
                     linkedFileIds = fields['Files'] || [];
                     linkedEmailIds = fields['Emails'] || [];
                     break;
-                case 'email':
-                    // For emails: get IDs from Files and Invoices fields
+                case 'delivery-ticket':
+                    // For delivery tickets: get IDs from Files and Emails fields
                     linkedFileIds = fields['Files'] || [];
-                    linkedInvoiceIds = fields['Invoices'] || [];
+                    linkedEmailIds = fields['Emails'] || [];
                     break;
                 case 'file':
-                    // For files: get IDs from Invoices and Emails fields
+                    // For files: get IDs from Invoices, Delivery Tickets and Emails fields
                     linkedInvoiceIds = fields['Invoices'] || [];
+                    linkedDeliveryTicketIds = fields['Delivery Tickets'] || [];
                     linkedEmailIds = fields['Emails'] || [];
                     break;
             }
@@ -170,6 +190,7 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
             console.log(`Debug: Linked file IDs:`, linkedFileIds);
             console.log(`Debug: Linked email IDs:`, linkedEmailIds);
             console.log(`Debug: Linked invoice IDs:`, linkedInvoiceIds);
+            console.log(`Debug: Linked delivery ticket IDs:`, linkedDeliveryTicketIds);
 
             const promises = [];
 
@@ -196,39 +217,57 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
                 promises.push(Promise.resolve({ ok: true, json: () => Promise.resolve({ records: [] }) }));
             }
 
-            const [filesResponse, emailsResponse, invoicesResponse] = await Promise.all(promises);
+            // Fetch delivery tickets by ID if we have any
+            if (linkedDeliveryTicketIds.length > 0) {
+                console.log(`Debug: Fetching delivery tickets for IDs:`, linkedDeliveryTicketIds);
+                promises.push(
+                    fetch(`/api/airtable/Delivery%20Tickets?baseId=${BASE_ID}&pageSize=100`)
+                );
+            } else {
+                promises.push(Promise.resolve({ ok: true, json: () => Promise.resolve({ records: [] }) }));
+            }
+
+            const [filesResponse, emailsResponse, invoicesResponse, deliveryTicketsResponse] = await Promise.all(promises);
 
             if (!filesResponse.ok) {
-                throw new Error(`Failed to fetch files: ${filesResponse.status}`);
+                throw new Error(`Failed to fetch files: ${('status' in filesResponse) ? filesResponse.status : 'Unknown error'}`);
             }
             // Skip email response validation since emails were removed
-            if (invoicesResponse && !invoicesResponse.ok) {
+            if (invoicesResponse && 'status' in invoicesResponse && !invoicesResponse.ok) {
                 throw new Error(`Failed to fetch invoices: ${invoicesResponse.status}`);
             }
+            if (deliveryTicketsResponse && 'status' in deliveryTicketsResponse && !deliveryTicketsResponse.ok) {
+                throw new Error(`Failed to fetch delivery tickets: ${deliveryTicketsResponse.status}`);
+            }
 
-            const [filesData, emailsData, invoicesData] = await Promise.all([
+            const [filesData, emailsData, invoicesData, deliveryTicketsData] = await Promise.all([
                 filesResponse.json(),
                 emailsResponse.json(),
-                invoicesResponse ? invoicesResponse.json() : Promise.resolve({ records: [] })
+                invoicesResponse ? invoicesResponse.json() : Promise.resolve({ records: [] }),
+                deliveryTicketsResponse ? deliveryTicketsResponse.json() : Promise.resolve({ records: [] })
             ]);
 
             // Filter the fetched records to only include the ones we actually want
             const filteredFiles = filesData.records.filter((record: any) => linkedFileIds.includes(record.id));
             const filteredEmails = emailsData.records.filter((record: any) => linkedEmailIds.includes(record.id));
             const filteredInvoices = invoicesData.records.filter((record: any) => linkedInvoiceIds.includes(record.id));
+            const filteredDeliveryTickets = deliveryTicketsData.records.filter((record: any) => linkedDeliveryTicketIds.includes(record.id));
 
             const transformedFiles = filteredFiles.map(transformFileRecord);
             const transformedEmails = filteredEmails.map(transformEmailRecord);
             const transformedInvoices = filteredInvoices.map(transformInvoiceRecord);
+            const transformedDeliveryTickets = filteredDeliveryTickets.map(transformDeliveryTicketRecord);
 
-            console.log(`Debug: Fetched ${transformedFiles.length} files, ${transformedEmails.length} emails, and ${transformedInvoices.length} invoices for ${docType} ${id}`);
+            console.log(`Debug: Fetched ${transformedFiles.length} files, ${transformedEmails.length} emails, ${transformedInvoices.length} invoices, and ${transformedDeliveryTickets.length} delivery tickets for ${docType} ${id}`);
             console.log(`Debug: Files:`, transformedFiles);
             console.log(`Debug: Emails:`, transformedEmails);
             console.log(`Debug: Invoices:`, transformedInvoices);
+            console.log(`Debug: Delivery Tickets:`, transformedDeliveryTickets);
 
             setFiles(transformedFiles);
             setEmails(transformedEmails);
             setInvoices(transformedInvoices);
+            setDeliveryTickets(transformedDeliveryTickets);
 
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to fetch linked documents';
@@ -247,6 +286,7 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
             setFiles([]);
             setEmails([]);
             setInvoices([]);
+            setDeliveryTickets([]);
             setError(null);
         }
     }, [documentId, documentType, fetchLinkedDocuments]);
@@ -255,6 +295,7 @@ export function useLinkedDocuments(documentId?: string, documentType?: 'invoice'
         files,
         emails,
         invoices,
+        deliveryTickets,
         loading,
         error
     };
@@ -311,10 +352,21 @@ export function useLinkedEmails(invoiceIds: string[] = []) {
  * Combined hook for getting all document links for any document type (including transformed data for LinksTab)
  */
 export function useDocumentLinks(documentId?: string, documentType?: 'invoice' | 'delivery-ticket' | 'file') {
-    const { files, emails, invoices, loading, error } = useLinkedDocuments(documentId, documentType);
+    const { files, emails, invoices, deliveryTickets, loading, error } = useLinkedDocuments(documentId, documentType);
 
     const linkedItems = useMemo(() => {
-        const items = [];
+        const items: Array<{
+            id: string;
+            name: string;
+            type: string;
+            status?: string;
+            uploadDate?: Date;
+            size?: number;
+            errorCode?: string;
+            received?: Date;
+            subject?: string;
+            fromEmail?: string;
+        }> = [];
 
         // Add files
         files.forEach(file => {
@@ -325,6 +377,7 @@ export function useDocumentLinks(documentId?: string, documentType?: 'invoice' |
                 status: file.status,
                 uploadDate: file.uploadDate,
                 size: file.pages ? file.pages * 1024 : undefined, // Rough size estimate based on pages
+                errorCode: file.errorCode,
             });
         });
 
@@ -354,15 +407,29 @@ export function useDocumentLinks(documentId?: string, documentType?: 'invoice' |
             });
         });
 
+        // Add delivery tickets
+        deliveryTickets.forEach(deliveryTicket => {
+            items.push({
+                id: deliveryTicket.id,
+                name: deliveryTicket.invoiceNumber || `Delivery Ticket ${deliveryTicket.id}`,
+                type: 'delivery-ticket',
+                status: deliveryTicket.status,
+                received: deliveryTicket.invoiceDate,
+                subject: `${deliveryTicket.vendorName} - ${deliveryTicket.invoiceNumber}`,
+                fromEmail: deliveryTicket.vendorName,
+            });
+        });
+
         console.log(`Debug: useDocumentLinks created ${items.length} linked items:`, items.map(i => `${i.type}: ${i.name}`));
         return items;
-    }, [files, emails, invoices]);
+    }, [files, emails, invoices, deliveryTickets]);
 
     return {
         linkedItems,
         files,
         emails,
         invoices,
+        deliveryTickets,
         loading,
         error
     };
@@ -376,10 +443,19 @@ export function useInvoiceLinks(invoiceId?: string) {
 }
 
 /**
- * Hook for email document links
+ * Hook for email document links - deprecated since emails were removed
  */
 export function useEmailLinks(emailId?: string) {
-    return useDocumentLinks(emailId, 'email');
+    // Emails functionality was removed - return empty results
+    return { 
+        linkedItems: [], 
+        files: [], 
+        emails: [], 
+        invoices: [], 
+        deliveryTickets: [],
+        loading: false, 
+        error: null 
+    };
 }
 
 /**

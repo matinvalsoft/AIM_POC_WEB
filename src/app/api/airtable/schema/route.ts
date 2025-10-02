@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 /**
  * Helper function to get field type information
  */
-export function getFieldTypeInfo(fieldType: string) {
+function getFieldTypeInfo(fieldType: string) {
   const typeMapping: Record<string, { 
     category: string; 
     description: string; 

@@ -6,7 +6,7 @@ import { CompactFilesList } from "@/components/documents/compact-files-list";
 import { PDFViewer } from "@/components/documents/pdf-viewer";
 import { FileDetailsPanel } from "@/components/documents/file-details-panel";
 import { useFiles } from "@/lib/airtable/files-hooks";
-import { logStatusChange, logFieldEdit } from "@/lib/airtable/activity-logger";
+// Activity logging removed - Activities table no longer exists
 import { cx } from "@/utils/cx";
 import type { AirtableFile } from "@/lib/airtable/files-hooks";
 
@@ -63,7 +63,7 @@ export default function FilesPage() {
                 case 'queued': return file.status === 'Queued';
                 case 'processing': return file.status === 'Processing';
                 case 'processed': return file.status === 'Processed';
-                case 'error': return file.status === 'Error';
+                case 'error': return file.status === 'Attention';
                 case 'linked': return file.isLinked;
                 case 'duplicates': return file.isDuplicate;
                 default: return true;
@@ -121,15 +121,6 @@ export default function FilesPage() {
                     const newValue = updatedFile[field as keyof AirtableFile];
                     
                     if (oldValue !== newValue) {
-                        await logFieldEdit(
-                            updatedFile.id,
-                            updatedFile.name,
-                            field,
-                            oldValue,
-                            newValue,
-                            'User', // TODO: Get actual user info
-                            `Field ${field} updated`
-                        );
                     }
                 }
             }
@@ -143,17 +134,9 @@ export default function FilesPage() {
     const handleMarkAsLinked = async (file: AirtableFile) => {
         try {
             const oldStatus = file.status;
-            await updateFile(file.id, { status: 'Linked' });
+            await updateFile(file.id, { status: 'Processed' });
             
             // Log the activity
-            await logStatusChange(
-                file.id,
-                file.name,
-                oldStatus,
-                'Linked',
-                'User', // TODO: Get actual user info
-                'File marked as linked'
-            );
         } catch (err) {
             console.error('Failed to mark as linked:', err);
         }
@@ -162,17 +145,9 @@ export default function FilesPage() {
     const handleMarkAsNeedsAttention = async (file: AirtableFile) => {
         try {
             const oldStatus = file.status;
-            await updateFile(file.id, { status: 'Needs attention' });
+            await updateFile(file.id, { status: 'Attention' });
             
             // Log the activity
-            await logStatusChange(
-                file.id,
-                file.name,
-                oldStatus,
-                'Needs attention',
-                'User', // TODO: Get actual user info
-                'File marked as needing attention'
-            );
         } catch (err) {
             console.error('Failed to mark as needs attention:', err);
         }
@@ -183,14 +158,6 @@ export default function FilesPage() {
             await archiveFile(file.id);
             
             // Log the activity
-            await logStatusChange(
-                file.id,
-                file.name,
-                file.status,
-                'Archived',
-                'User', // TODO: Get actual user info
-                'File archived'
-            );
         } catch (err) {
             console.error('Failed to archive file:', err);
         }
@@ -286,13 +253,9 @@ export default function FilesPage() {
                 </div>
 
                 {/* Right Column - File Details */}
-                <div className="flex-shrink-0 max-w-sm h-full">
+                <div className="flex-shrink-0 h-full">
                     <FileDetailsPanel
                         file={selectedFile}
-                        onSave={handleFileUpdate}
-                        onMarkAsLinked={handleMarkAsLinked}
-                        onMarkAsNeedsAttention={handleMarkAsNeedsAttention}
-                        onArchive={handleArchive}
                         onDelete={handleDelete}
                         onReprocess={handleReprocess}
                         activeTab={activeTab}

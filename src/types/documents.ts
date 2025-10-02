@@ -1,21 +1,10 @@
 import type { AirtableAttachment } from '@/lib/airtable/types';
-import type { 
-  InvoiceStatus, 
-  FileStatus, 
-  ActivityType,
-  INVOICE_STATUS,
-  FILE_STATUS,
-  ACTIVITY_TYPE 
-} from '@/lib/airtable/schema-types';
 
 // Document Types
-export type DocumentType = 'invoices' | 'files' | 'emails' | 'store-receivers' | 'delivery-tickets';
+export type DocumentType = 'invoices' | 'files' | 'store-receivers' | 'delivery-tickets';
 
-// Use the actual Airtable schema statuses
-export type DocumentStatus = InvoiceStatus;
-
-// Export the schema constants for use in components
-export { INVOICE_STATUS, FILE_STATUS, ACTIVITY_TYPE };
+// Document Status (from Airtable schema)
+export type DocumentStatus = 'open' | 'reviewed' | 'exported' | 'pending' | 'approved' | 'rejected';
 
 // Completeness is computed on the fly in UI; keeping type for legacy references if any
 export type CompletenessStatus = 'complete' | 'incomplete' | 'missing_fields';
@@ -25,59 +14,28 @@ export interface BaseDocument {
     id: string;
     type: DocumentType;
     status: DocumentStatus;
-    // completeness is not persisted; compute in UI
     missingFields?: string[]; // Deprecated - kept for compatibility
     missingFieldsMessage?: string; // Server-side validation from Airtable
     createdAt: Date;
     updatedAt: Date;
-    lines?: DocumentLine[];
     linkedIds: string[];
 }
-
-// Document Line Interface
-export interface DocumentLine {
-    id: string;
-    description: string;
-    amount: number;
-    lineNumber: number;
-    // Optional line-level coding overrides
-    glAccount?: string;
-    // Airtable alignment: optional timestamps on line items
-    createdAt?: Date;
-    updatedAt?: Date;
-}
-
-// Removed LineCodingAllocation - simplified to use line-level coding fields directly
 
 // Invoice Document
 export interface Invoice extends BaseDocument {
     type: 'invoices';
-    // Airtable structure - vendor split into separate fields
     vendorName: string;
-    vendorCode?: string; // Optional/advisory only
+    vendorCode?: string;
     invoiceNumber: string;
     invoiceDate: Date;
-    dueDate?: Date; // Optional in Airtable schema
     amount: number;
-    // Coding mode control
-    isMultilineCoding: boolean; // Controls whether to use invoice-level or line-level coding
-    // ERP attributes (previously project/task/cost center)
-    erpAttribute1?: string; // Previously "project"
-    erpAttribute2?: string; // Previously "task"
-    erpAttribute3?: string; // Previously "cost center"
-    // Invoice-level coding fields (ignored when isMultilineCoding = true, but preserved)
-    glAccount?: string; // 6-digit
-    // Document processing
-    rawTextOcr?: string; // OCR extracted text from original document
-    // Rejection tracking
-    rejectionCode?: string; // Structured rejection code
-    rejectionReason?: string; // Human-readable rejection reason
-    // Email attachments from linked emails (multipleLookupValues)
+    glAccount?: string;
+    rawTextOcr?: string;
+    rejectionCode?: string;
+    rejectionReason?: string;
     attachments?: AirtableAttachment[];
-    // Additional fields from schema
-    files?: string[]; // Links to file records
-    emails?: string[]; // Links to email records
-    team?: string[]; // Links to team records (replaces Store Number)
+    files?: string[];
+    team?: string[];
 }
 
 // Purchase Order Document
@@ -132,36 +90,40 @@ export type FileTag = 'duplicate' | 'corrupt' | 'unreadable' | 'password' | 'nee
 // Delivery Ticket Document
 export interface DeliveryTicket extends BaseDocument {
     type: 'delivery-tickets';
-    // Airtable structure - vendor split into separate fields
     vendorName: string;
-    vendorCode?: string; // Optional/advisory only
+    vendorCode?: string;
     invoiceNumber: string;
     invoiceDate: Date;
-    dueDate?: Date; // Optional in Airtable schema
     amount: number;
-    // Coding mode control (same as invoices for compatibility)
-    isMultilineCoding?: boolean; // Controls whether to use document-level or line-level coding
-    // ERP attributes (same structure as invoices)
-    erpAttribute1?: string; // Previously "project"
-    erpAttribute2?: string; // Previously "task"
-    erpAttribute3?: string; // Previously "cost center"
-    // Delivery ticket-level coding fields
-    glAccount?: string; // 6-digit
-    // Document processing
-    rawTextOcr?: string; // OCR extracted text from original document
-    // Rejection tracking
-    rejectionCode?: string; // Structured rejection code
-    rejectionReason?: string; // Human-readable rejection reason
-    // Email attachments from linked emails (multipleLookupValues)
+    glAccount?: string;
+    rawTextOcr?: string;
+    rejectionCode?: string;
+    rejectionReason?: string;
     attachments?: AirtableAttachment[];
-    // Additional fields from schema
-    files?: string[]; // Links to file records
-    emails?: string[]; // Links to email records
-    team?: string[]; // Links to team records
+    files?: string[];
+    team?: string[];
+}
+
+// Store Receiver Document
+export interface StoreReceiver extends BaseDocument {
+    type: 'store-receivers';
+    documentNumber: string;
+    vendorName: string;
+    vendorCode?: string;
+    invoiceNumber: string;
+    invoiceDate: Date;
+    amount: number;
+    glAccount?: string;
+    documentRawText?: string;
+    rejectionCode?: string;
+    rejectionReason?: string;
+    attachments?: AirtableAttachment[];
+    files?: string[];
+    team?: string[];
 }
 
 // Union type for all documents
-export type Document = Invoice | DeliveryTicket | PurchaseOrder | Shipping | BankStatement | FileDocument;
+export type Document = Invoice | DeliveryTicket | StoreReceiver | PurchaseOrder | Shipping | BankStatement | FileDocument;
 
 // Document Link
 export interface DocumentLink {
