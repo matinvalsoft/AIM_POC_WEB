@@ -10,7 +10,6 @@ import { createLogger, measurePerformance } from './logger';
 import { imageChunkToDataURI } from './image-chunker';
 
 const logger = createLogger('VisionClient');
-const settings = getOCR2Settings();
 
 /**
  * OpenAI client instance
@@ -22,6 +21,7 @@ let openaiClient: OpenAI | null = null;
  */
 function getOpenAIClient(): OpenAI {
   if (!openaiClient) {
+    const settings = getOCR2Settings(); // Get settings lazily, not at module init
     openaiClient = new OpenAI({
       apiKey: settings.openai.apiKey,
       baseURL: settings.openai.baseUrl,
@@ -70,13 +70,23 @@ class Semaphore {
   }
 }
 
-const semaphore = new Semaphore(settings.concurrency.maxParallelVisionCalls);
+let semaphore: Semaphore | null = null;
+
+function getSemaphore(): Semaphore {
+  if (!semaphore) {
+    const settings = getOCR2Settings();
+    semaphore = new Semaphore(settings.concurrency.maxParallelVisionCalls);
+  }
+  return semaphore;
+}
 
 /**
  * Extract text from image chunk using OpenAI Vision API
  */
 export async function extractTextFromChunk(chunk: ImageChunk): Promise<OCRResult> {
   const operation = async (): Promise<OCRResult> => {
+    const semaphore = getSemaphore();
+    const settings = getOCR2Settings();
     await semaphore.acquire();
     
     try {
