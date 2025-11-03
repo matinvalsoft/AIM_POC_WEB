@@ -23,10 +23,19 @@ const config = {
   maxParallelCalls: 5,          // MAX_PARALLEL_VISION_CALLS
 };
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: config.openaiApiKey,
-});
+// Lazy-initialize OpenAI client
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    if (!config.openaiApiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
+    }
+    _openai = new OpenAI({
+      apiKey: config.openaiApiKey,
+    });
+  }
+  return _openai;
+}
 
 interface ImageChunk {
   buffer: Buffer;
@@ -394,7 +403,7 @@ async function extractTextFromChunk(chunk: ImageChunk): Promise<{ chunk: ImageCh
     const base64Image = chunk.buffer.toString('base64');
     const dataUri = `data:image/png;base64,${base64Image}`;
     
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: config.model,
       messages: [
         {
