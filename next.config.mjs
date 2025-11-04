@@ -15,6 +15,16 @@ const nextConfig = {
     experimental: {
         optimizePackageImports: ["@untitledui/icons"],
     },
+    // Externalize native modules for serverless
+    webpack: (config, { isServer }) => {
+        if (isServer) {
+            config.externals.push({
+                '@napi-rs/canvas': 'commonjs @napi-rs/canvas',
+                'canvas': 'commonjs canvas',
+            });
+        }
+        return config;
+    },
 };
 
 export default nextConfig;
