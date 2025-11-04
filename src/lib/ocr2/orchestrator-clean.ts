@@ -154,16 +154,49 @@ async function downloadPDF(url: string): Promise<Buffer> {
 }
 
 /**
- * Convert PDF to images using system pdftoppm command
+ * Convert PDF to images using Vercel-compatible libraries
+ * Uses pdf.js (mozilla) instead of system pdftoppm command
  */
 async function pdfToImages(pdfBuffer: Buffer): Promise<Buffer[]> {
+  console.log(`🖼️  Converting PDF to images...`);
+  
+  try {
+    // Check if we're in a serverless environment (Vercel)
+    const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    
+    if (isServerless) {
+      console.log(`🌐 Detected serverless environment - using pdf.js`);
+    } else {
+      console.log(`💻 Local environment - attempting system pdftoppm first`);
+    }
+    
+    // Try system pdftoppm first (local only) for best performance
+    if (!isServerless) {
+      try {
+        return await pdfToImagesSystem(pdfBuffer);
+      } catch (systemError) {
+        console.log(`⚠️  System pdftoppm failed, falling back to pdf.js: ${systemError}`);
+      }
+    }
+    
+    // Use pdf.js for serverless environments or as fallback
+    return await pdfToImagesVercel(pdfBuffer);
+    
+  } catch (error) {
+    console.error(`❌ PDF conversion failed:`, error);
+    throw error;
+  }
+}
+
+/**
+ * System pdftoppm conversion (local development only)
+ */
+async function pdfToImagesSystem(pdfBuffer: Buffer): Promise<Buffer[]> {
   const tempDir = '/tmp';
   const baseName = `ocr2_page_${Date.now()}`;
   const tempPdfPath = `/tmp/ocr2_pdf_${Date.now()}.pdf`;
   
   try {
-    console.log(`🖼️  Converting PDF to images...`);
-    
     // Write PDF buffer to temp file
     writeFileSync(tempPdfPath, pdfBuffer);
     
@@ -174,19 +207,16 @@ async function pdfToImages(pdfBuffer: Buffer): Promise<Buffer[]> {
     execSync(command, { stdio: 'pipe' });
     
     // Find generated images
-    // pdftoppm generates files with different naming patterns:
-    // - For small PDFs: basename-1.png, basename-2.png
-    // - For large PDFs: basename-01.png, basename-02.png, or basename-001.png (with zero-padding)
     const images: Buffer[] = [];
     
     for (let page = 1; page <= config.maxPages; page++) {
       let imagePath: string | null = null;
       
-      // Try different padding patterns: no padding, 2-digit, 3-digit
+      // Try different padding patterns
       const patterns = [
-        `${tempDir}/${baseName}-${page}.png`,                    // No padding: -1.png
-        `${tempDir}/${baseName}-${String(page).padStart(2, '0')}.png`,  // 2-digit: -01.png
-        `${tempDir}/${baseName}-${String(page).padStart(3, '0')}.png`,  // 3-digit: -001.png
+        `${tempDir}/${baseName}-${page}.png`,
+        `${tempDir}/${baseName}-${String(page).padStart(2, '0')}.png`,
+        `${tempDir}/${baseName}-${String(page).padStart(3, '0')}.png`,
       ];
       
       for (const pattern of patterns) {
@@ -200,8 +230,6 @@ async function pdfToImages(pdfBuffer: Buffer): Promise<Buffer[]> {
         const imageBuffer = readFileSync(imagePath);
         images.push(imageBuffer);
         console.log(`✅ Page ${page}: ${Math.round(imageBuffer.length / 1024)}KB`);
-        
-        // Clean up temp image file
         unlinkSync(imagePath);
       } else {
         console.log(`ℹ️  No more pages after page ${page - 1}`);
@@ -217,10 +245,115 @@ async function pdfToImages(pdfBuffer: Buffer): Promise<Buffer[]> {
     return images;
     
   } finally {
-    // Clean up temp PDF file
     if (existsSync(tempPdfPath)) {
       unlinkSync(tempPdfPath);
     }
+  }
+}
+
+/**
+ * Vercel-compatible PDF conversion using pdf.js
+ */
+async function pdfToImagesVercel(pdfBuffer: Buffer): Promise<Buffer[]> {
+  try {
+    console.log(`📄 Converting PDF using pdf.js (serverless-compatible)`);
+    
+    // Import pdfjs-dist and canvas
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const { createCanvas, Image: CanvasImage } = await import('canvas');
+    
+    // Polyfill Image for embedded images in PDFs
+    if (typeof (global as any).Image === 'undefined') {
+      (global as any).Image = CanvasImage;
+    }
+    
+    // Setup canvas polyfill for pdfjs (required for node.js environment)
+    const NodeCanvasFactory = class {
+      create(width: number, height: number) {
+        const canvas = createCanvas(width, height);
+        return {
+          canvas,
+          context: canvas.getContext('2d'),
+        };
+      }
+
+      reset(canvasAndContext: any, width: number, height: number) {
+        canvasAndContext.canvas.width = width;
+        canvasAndContext.canvas.height = height;
+      }
+
+      destroy(canvasAndContext: any) {
+        canvasAndContext.canvas.width = 0;
+        canvasAndContext.canvas.height = 0;
+        canvasAndContext.canvas = null;
+        canvasAndContext.context = null;
+      }
+    };
+    
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(pdfBuffer),
+      verbosity: 0,
+      useSystemFonts: true,
+    });
+    
+    const pdfDoc = await loadingTask.promise;
+    const numPages = Math.min(pdfDoc.numPages, config.maxPages);
+    
+    console.log(`📄 PDF loaded: ${numPages} pages to process`);
+
+    const imageBuffers: Buffer[] = [];
+    const canvasFactory = new NodeCanvasFactory();
+
+    // Process each page
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      try {
+        const page = await pdfDoc.getPage(pageNum);
+        
+        // Calculate viewport with desired DPI
+        const scale = config.dpi / 72;
+        const viewport = page.getViewport({ scale });
+
+        // Create canvas
+        const canvasAndContext = canvasFactory.create(
+          viewport.width,
+          viewport.height
+        );
+
+        // Render PDF page to canvas
+        await page.render({
+          canvasContext: canvasAndContext.context,
+          viewport: viewport,
+          canvasFactory: canvasFactory as any,
+        }).promise;
+
+        // Convert canvas to PNG buffer
+        const imageBuffer = canvasAndContext.canvas.toBuffer('image/png');
+        imageBuffers.push(imageBuffer);
+
+        console.log(`✅ Page ${pageNum}: ${Math.round(imageBuffer.length / 1024)}KB (${Math.round(viewport.width)}x${Math.round(viewport.height)}px)`);
+
+        // Clean up
+        canvasFactory.destroy(canvasAndContext);
+        page.cleanup();
+      } catch (pageError) {
+        console.error(`⚠️  Warning: Failed to process page ${pageNum}:`, pageError);
+        // Continue with other pages even if one fails
+      }
+    }
+
+    if (imageBuffers.length === 0) {
+      throw new Error('No pages could be converted from PDF');
+    }
+
+    console.log(`✅ PDF conversion completed: ${imageBuffers.length} pages`);
+    return imageBuffers;
+    
+  } catch (error) {
+    console.error(`❌ pdf.js conversion failed:`, error);
+    throw new Error(
+      `Vercel PDF conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
