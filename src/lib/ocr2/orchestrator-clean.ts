@@ -260,11 +260,21 @@ async function pdfToImagesVercel(pdfBuffer: Buffer): Promise<Buffer[]> {
     
     // Import pdfjs-dist and canvas
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const { createCanvas, Image: CanvasImage } = await import('canvas');
+    const canvas = await import('@napi-rs/canvas');
+    const { createCanvas, Image: CanvasImage, DOMMatrix, ImageData, Path2D } = canvas;
     
-    // Polyfill Image for embedded images in PDFs
+    // Polyfill globals for pdfjs (required for embedded images and rendering)
     if (typeof (global as any).Image === 'undefined') {
       (global as any).Image = CanvasImage;
+    }
+    if (typeof (global as any).DOMMatrix === 'undefined') {
+      (global as any).DOMMatrix = DOMMatrix;
+    }
+    if (typeof (global as any).ImageData === 'undefined') {
+      (global as any).ImageData = ImageData;
+    }
+    if (typeof (global as any).Path2D === 'undefined') {
+      (global as any).Path2D = Path2D;
     }
     
     // Setup canvas polyfill for pdfjs (required for node.js environment)
