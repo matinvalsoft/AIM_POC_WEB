@@ -5,7 +5,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { transformAirtableToInvoice, transformInvoiceToAirtable } from './transforms';
+import { transformAirtableToInvoiceEntity, transformInvoiceToAirtableEntity } from './transforms';
+import { TABLE_NAMES } from './schema-types';
 import type { Invoice } from '@/types/documents';
 import type { AirtableRecord } from './types';
 
@@ -29,7 +30,8 @@ interface UseInvoicesResult {
 }
 
 /**
- * Hook for managing invoices
+ * Hook for managing invoices from the Invoices table (primary entity)
+ * Updated to fetch from Invoices table instead of POInvoiceHeaders
  */
 export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesResult {
   const { filter, sort, autoFetch = true } = options;
@@ -69,8 +71,8 @@ export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesResult
 
       queryParams.append('pageSize', '50');
 
-      // Fetch invoices only (invoice lines capability was removed)
-      const invoicesResponse = await fetch(`/api/airtable/InvoiceHeaders?${queryParams}`);
+      // Fetch invoices from Invoices table (primary entity)
+      const invoicesResponse = await fetch(`/api/airtable/Invoices?${queryParams}`);
 
       if (!invoicesResponse.ok) {
         throw new Error(`Failed to fetch invoices: ${invoicesResponse.status}`);
@@ -78,9 +80,9 @@ export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesResult
 
       const invoicesData = await invoicesResponse.json();
 
-      // Transform the data (no longer need to combine with lines)
+      // Transform the data using Invoice entity transform
       const transformedInvoices = invoicesData.records.map((invoiceRecord: AirtableRecord) => {
-        return transformAirtableToInvoice(invoiceRecord);
+        return transformAirtableToInvoiceEntity(invoiceRecord);
       });
 
       setInvoices(transformedInvoices);
@@ -118,13 +120,13 @@ export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesResult
   }, []);
 
   /**
-   * Update an invoice
+   * Update an invoice in Invoices table
    */
   const updateInvoice = useCallback(async (invoiceId: string, updates: Partial<Invoice>) => {
     try {
-      const airtableFields = transformInvoiceToAirtable(updates);
+      const airtableFields = transformInvoiceToAirtableEntity(updates);
       
-      const response = await fetch(`/api/airtable/InvoiceHeaders`, {
+      const response = await fetch(`/api/airtable/Invoices`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,13 +153,13 @@ export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesResult
   }, []);
 
   /**
-   * Create a new invoice
+   * Create a new invoice in Invoices table
    */
   const createInvoice = useCallback(async (invoice: Partial<Invoice>): Promise<Invoice> => {
     try {
-      const airtableFields = transformInvoiceToAirtable(invoice);
+      const airtableFields = transformInvoiceToAirtableEntity(invoice);
       
-      const response = await fetch(`/api/airtable/InvoiceHeaders`, {
+      const response = await fetch(`/api/airtable/Invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields: airtableFields }),
@@ -168,7 +170,7 @@ export function useInvoices(options: UseInvoicesOptions = {}): UseInvoicesResult
       }
 
       const data = await response.json();
-      const createdInvoice = transformAirtableToInvoice(data.records[0]);
+      const createdInvoice = transformAirtableToInvoiceEntity(data.records[0]);
       
       // Add to local state
       setInvoices(prevInvoices => [createdInvoice, ...prevInvoices]);
@@ -220,6 +222,7 @@ export function useInvoicesNeedingCoding() {
 
 /**
  * Hook for invoice counts by status
+ * Updated to fetch from Invoices table
  */
 export function useInvoiceCounts() {
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -233,7 +236,7 @@ export function useInvoiceCounts() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/airtable/InvoiceHeaders?baseId=${BASE_ID}&fields=Status`);
+      const response = await fetch(`/api/airtable/Invoices?baseId=${BASE_ID}&fields=Status`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -242,7 +245,7 @@ export function useInvoiceCounts() {
       const data = await response.json();
       const statusCounts: Record<string, number> = {};
 
-      // Count by status (handle new capitalized status values)
+      // Count by status (Invoices table status values)
       data.records.forEach((record: AirtableRecord) => {
         const status = record.fields.Status || 'Pending';
         // Normalize to lowercase for counting
@@ -254,16 +257,16 @@ export function useInvoiceCounts() {
       const total = data.records.length;
       const needsCoding = data.records.filter((record: AirtableRecord) => {
         const fields = record.fields;
-        // Check if key fields are missing
-        return !fields['Vendor Name'] || !fields['AP-Invoice-Number'] || !fields['Total-Invoice-Amount'];
+        // Check if key fields are missing (Invoices table fields)
+        return !fields['Vendor Name'] || !fields['Invoice Number'] || !fields['Amount'];
       }).length;
 
       setCounts({
         total,
         pending: statusCounts.pending || 0,
-        open: statusCounts.pending || 0, // Map pending to open for backward compatibility
-        reviewed: statusCounts.reviewed || statusCounts.matched || 0,
-        approved: statusCounts.reviewed || 0, // Map reviewed to approved for backward compatibility
+        open: statusCounts.matched || 0, // Map matched to open for backward compatibility
+        reviewed: statusCounts.queued || 0, // Map queued to reviewed
+        approved: statusCounts.queued || 0, // Map queued to approved for backward compatibility
         rejected: statusCounts.error || 0, // Map error to rejected
         exported: statusCounts.exported || 0,
         needsCoding

@@ -65,7 +65,7 @@ schema.tables.forEach(table => {
   fieldIdsOutput += `  ${tableName}: {\n`;
   
   table.fields.forEach(field => {
-    const fieldName = field.name.toUpperCase().replace(/\s+/g, '_');
+    const fieldName = field.name.toUpperCase().replace(/\s+/g, '_').replace(/-/g, '_');
     fieldIdsOutput += `    ${fieldName}: '${field.id}',\n`;
   });
   

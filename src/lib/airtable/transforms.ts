@@ -2,8 +2,32 @@ import type { Invoice, DeliveryTicket, DocumentLine, DocumentStatus } from '@/ty
 import type { AirtableRecord } from './types';
 import { FIELD_IDS, TABLE_NAMES } from './schema-types';
 
-// Field mapping constants for InvoiceHeaders table (formerly Invoices)
-export const INVOICE_FIELDS = {
+// Field mapping constants for Invoices table (primary entity)
+export const INVOICE_ENTITY_FIELDS = {
+  INVOICE_NUMBER: 'Invoice Number',
+  STATUS: 'Status',
+  CREATED_AT: 'Created At',
+  UPDATED_AT: 'Modified At',
+  VENDOR_NAME: 'Vendor Name',
+  VEND_ID: 'VendId',
+  DATE: 'Date',
+  AMOUNT: 'Amount',
+  FREIGHT_CHARGE: 'Freight Charge',
+  SURCHARGE: 'Surcharge',
+  POS: 'POs',
+  DOCUMENT_RAW_TEXT: 'Document Raw Text',
+  FILES: 'Files',
+  PO_INVOICE_HEADERS: 'POInvoiceHeaders',
+  MATCH_JSON_PAYLOAD: 'MatchJSONPayload',
+  ERROR_CODE: 'Error Code',
+  BALANCE: 'Balance',
+  BALANCE_EXPLANATION: 'Balance Explanation',
+  FILE_RAW_TEXT: 'File Raw Text', // Lookup field
+  MISSING_FIELDS: 'Missing Fields', // Formula field
+} as const;
+
+// Field mapping constants for POInvoiceHeaders table
+export const PO_INVOICE_HEADER_FIELDS = {
   INVOICE_NUMBER: 'AP-Invoice-Number',
   STATUS: 'Status',
   CREATED_AT: 'Created At',
@@ -19,13 +43,17 @@ export const INVOICE_FIELDS = {
   ATTACHMENTS: 'Attachments',
   MISSING_FIELDS: 'Missing Fields', // Server-side validation field (formula)
   FILE_RAW_TEXT: 'File Raw Text', // Lookup field
-  INVOICE_DETAILS: 'Invoice Details', // Link to InvoiceDetails table
-  // New fields in InvoiceHeaders
+  INVOICE_DETAILS: 'Invoice Details', // Link to POInvoiceDetails table
+  INVOICES: 'Invoices', // Link to Invoices table
+  // Additional fields in POInvoiceHeaders
   COMPANY_CODE: 'Company-Code',
   TERMS_ID: 'TermsId',
   DUE_DATE: 'Due-Date',
   PO_NUMBER: 'PO-Number',
 } as const;
+
+// Legacy alias for backward compatibility
+export const INVOICE_FIELDS = PO_INVOICE_HEADER_FIELDS;
 
 // DEPRECATED: Delivery Tickets table no longer exists in new schema
 // Kept for backward compatibility during migration
@@ -54,9 +82,10 @@ export const DELIVERY_TICKET_FIELDS = {
 export { TABLE_NAMES };
 
 /**
- * Transform Airtable invoice record to Invoice
+ * Transform Airtable Invoice entity record to Invoice
+ * This is the NEW transform for the Invoices table (primary entity)
  */
-export function transformAirtableToInvoice(record: AirtableRecord): Invoice {
+export function transformAirtableToInvoiceEntity(record: AirtableRecord): Invoice {
   const fields = record.fields;
 
   // Parse dates
@@ -65,21 +94,14 @@ export function transformAirtableToInvoice(record: AirtableRecord): Invoice {
   };
 
   // Map status from Airtable to our DocumentStatus type
-  // NEW SCHEMA: Status values and their meanings:
-  // - Pending: No edits allowed, some fields missing/pending update
-  // - Matched: Edits allowed, invoice matched to PO, ready for review
-  // - Reviewed: No edits allowed, marked as reviewed, ready to export
-  // - Exported: No edits allowed, already exported
-  // - Error: No edits allowed, has errors
   const mapStatus = (airtableStatus: string): DocumentStatus => {
     const statusMap: Record<string, DocumentStatus> = {
-      // New schema mappings - keep Airtable values as-is for display
       'Pending': 'pending',
-      'Matched': 'open',      // Map to 'open' which is typically editable
-      'Reviewed': 'reviewed', // Map to 'reviewed' which is locked
+      'Matched': 'open',      // Editable state
+      'Queued': 'pending',
       'Exported': 'exported',
       'Error': 'rejected',
-      // Legacy mappings (lowercase) - for backward compatibility
+      // Legacy mappings
       'pending': 'pending',
       'open': 'open',
       'reviewed': 'reviewed',
@@ -91,77 +113,180 @@ export function transformAirtableToInvoice(record: AirtableRecord): Invoice {
   };
 
   // Read server-side validation from Airtable (formula field)
-  const missingFieldsMessage = fields[INVOICE_FIELDS.MISSING_FIELDS] || '';
+  const missingFieldsMessage = fields[INVOICE_ENTITY_FIELDS.MISSING_FIELDS] || '';
 
   return {
     id: record.id,
     type: 'invoices',
-    status: mapStatus(fields[INVOICE_FIELDS.STATUS] || 'Pending'),
+    status: mapStatus(fields[INVOICE_ENTITY_FIELDS.STATUS] || 'Pending'),
     missingFields: [], // Deprecated - kept for compatibility
     missingFieldsMessage, // Server-side validation message
-    invoiceNumber: fields[INVOICE_FIELDS.INVOICE_NUMBER] || '',
-    vendorName: fields[INVOICE_FIELDS.VENDOR_NAME] || '',
-    vendorCode: fields[INVOICE_FIELDS.VENDOR_ID] || '',
-    amount: fields[INVOICE_FIELDS.AMOUNT] || 0,
-    invoiceDate: parseDate(fields[INVOICE_FIELDS.INVOICE_DATE]) || new Date(),
-    glAccount: '', // GL Account moved to InvoiceDetails (line items)
-    rawTextOcr: fields[INVOICE_FIELDS.DOCUMENT_RAW_TEXT] || '',
-    rejectionCode: fields[INVOICE_FIELDS.ERROR_CODE] || '',
-    rejectionReason: fields[INVOICE_FIELDS.ERROR_REASON] || '',
-    team: [], // Team table no longer exists
+    invoiceNumber: fields[INVOICE_ENTITY_FIELDS.INVOICE_NUMBER] || '',
+    vendorName: fields[INVOICE_ENTITY_FIELDS.VENDOR_NAME] || '',
+    vendorCode: fields[INVOICE_ENTITY_FIELDS.VEND_ID] || '',
+    amount: fields[INVOICE_ENTITY_FIELDS.AMOUNT] || 0,
+    invoiceDate: parseDate(fields[INVOICE_ENTITY_FIELDS.DATE]) || new Date(),
+    glAccount: '', // GL Account is in POInvoiceDetails (line items)
+    rawTextOcr: fields[INVOICE_ENTITY_FIELDS.DOCUMENT_RAW_TEXT] || '',
+    rejectionCode: fields[INVOICE_ENTITY_FIELDS.ERROR_CODE] || '',
+    rejectionReason: '', // Not in Invoices table
+    team: [], // Not applicable to Invoice entity
     linkedIds: [],
     
-    // Linked InvoiceDetails records (line items)
-    invoiceDetails: fields[INVOICE_FIELDS.INVOICE_DETAILS] || [],
+    // Linked POInvoiceHeaders records
+    invoiceDetails: fields[INVOICE_ENTITY_FIELDS.PO_INVOICE_HEADERS] || [],
     
-    // Attachments from Files table
-    attachments: fields[INVOICE_FIELDS.ATTACHMENTS] || [],
-    files: fields[INVOICE_FIELDS.FILES] || [],
+    // Attachments from Files table (lookup)
+    attachments: [],
+    files: fields[INVOICE_ENTITY_FIELDS.FILES] || [],
     
     // Additional computed fields
-    createdAt: parseDate(fields[INVOICE_FIELDS.CREATED_AT]) || new Date(),
-    updatedAt: parseDate(fields[INVOICE_FIELDS.UPDATED_AT]) || new Date()
+    createdAt: parseDate(fields[INVOICE_ENTITY_FIELDS.CREATED_AT]) || new Date(),
+    updatedAt: parseDate(fields[INVOICE_ENTITY_FIELDS.UPDATED_AT]) || new Date()
   };
 }
 
 /**
- * Transform Invoice to Airtable record format
+ * Transform Airtable POInvoiceHeader record to Invoice
+ * This is for the POInvoiceHeaders table (legacy/backward compatibility)
+ */
+export function transformAirtableToInvoice(record: AirtableRecord): Invoice {
+  const fields = record.fields;
+
+  // Parse dates
+  const parseDate = (dateString: string | undefined) => {
+    return dateString ? new Date(dateString) : undefined;
+  };
+
+  // Map status from Airtable to our DocumentStatus type
+  const mapStatus = (airtableStatus: string): DocumentStatus => {
+    const statusMap: Record<string, DocumentStatus> = {
+      // POInvoiceHeaders status mappings
+      'Queued': 'pending',
+      'Exported': 'exported',
+      'Error': 'rejected',
+      // Legacy mappings
+      'Pending': 'pending',
+      'Matched': 'open',
+      'Reviewed': 'reviewed',
+      'pending': 'pending',
+      'open': 'open',
+      'reviewed': 'reviewed',
+      'approved': 'approved',
+      'rejected': 'rejected',
+      'exported': 'exported'
+    };
+    return statusMap[airtableStatus] || 'pending';
+  };
+
+  // Read server-side validation from Airtable (formula field)
+  const missingFieldsMessage = fields[PO_INVOICE_HEADER_FIELDS.MISSING_FIELDS] || '';
+
+  return {
+    id: record.id,
+    type: 'invoices',
+    status: mapStatus(fields[PO_INVOICE_HEADER_FIELDS.STATUS] || 'Queued'),
+    missingFields: [], // Deprecated - kept for compatibility
+    missingFieldsMessage, // Server-side validation message
+    invoiceNumber: fields[PO_INVOICE_HEADER_FIELDS.INVOICE_NUMBER] || '',
+    vendorName: fields[PO_INVOICE_HEADER_FIELDS.VENDOR_NAME] || '',
+    vendorCode: fields[PO_INVOICE_HEADER_FIELDS.VENDOR_ID] || '',
+    amount: fields[PO_INVOICE_HEADER_FIELDS.AMOUNT] || 0,
+    invoiceDate: parseDate(fields[PO_INVOICE_HEADER_FIELDS.INVOICE_DATE]) || new Date(),
+    glAccount: '', // GL Account moved to POInvoiceDetails (line items)
+    rawTextOcr: fields[PO_INVOICE_HEADER_FIELDS.DOCUMENT_RAW_TEXT] || '',
+    rejectionCode: fields[PO_INVOICE_HEADER_FIELDS.ERROR_CODE] || '',
+    rejectionReason: fields[PO_INVOICE_HEADER_FIELDS.ERROR_REASON] || '',
+    team: [], // Team table no longer exists
+    linkedIds: [],
+    
+    // Linked POInvoiceDetails records (line items)
+    invoiceDetails: fields[PO_INVOICE_HEADER_FIELDS.INVOICE_DETAILS] || [],
+    
+    // Attachments from Files table
+    attachments: fields[PO_INVOICE_HEADER_FIELDS.ATTACHMENTS] || [],
+    files: fields[PO_INVOICE_HEADER_FIELDS.FILES] || [],
+    
+    // Additional computed fields
+    createdAt: parseDate(fields[PO_INVOICE_HEADER_FIELDS.CREATED_AT]) || new Date(),
+    updatedAt: parseDate(fields[PO_INVOICE_HEADER_FIELDS.UPDATED_AT]) || new Date()
+  };
+}
+
+/**
+ * Transform Invoice to Airtable Invoice entity format (Invoices table)
+ */
+export function transformInvoiceToAirtableEntity(invoice: Partial<Invoice>): Record<string, any> {
+  const fields: Record<string, any> = {};
+
+  // Basic fields
+  if (invoice.invoiceNumber) fields[INVOICE_ENTITY_FIELDS.INVOICE_NUMBER] = invoice.invoiceNumber;
+  if (invoice.vendorName) fields[INVOICE_ENTITY_FIELDS.VENDOR_NAME] = invoice.vendorName;
+  if (invoice.vendorCode) fields[INVOICE_ENTITY_FIELDS.VEND_ID] = invoice.vendorCode;
+  if (invoice.amount !== undefined) fields[INVOICE_ENTITY_FIELDS.AMOUNT] = invoice.amount;
+  
+  // Map our internal status back to Airtable's capitalized values
+  if (invoice.status) {
+    const statusMap: Record<string, string> = {
+      'pending': 'Pending',
+      'open': 'Matched',       // Editable state
+      'reviewed': 'Queued',    // Ready for export
+      'approved': 'Queued',    // Also maps to Queued
+      'exported': 'Exported',
+      'rejected': 'Error',
+    };
+    fields[INVOICE_ENTITY_FIELDS.STATUS] = statusMap[invoice.status] || 'Pending';
+  }
+
+  // Dates
+  if (invoice.invoiceDate) {
+    fields[INVOICE_ENTITY_FIELDS.DATE] = invoice.invoiceDate.toISOString().split('T')[0];
+  }
+
+  // Text fields
+  if (invoice.rawTextOcr) fields[INVOICE_ENTITY_FIELDS.DOCUMENT_RAW_TEXT] = invoice.rawTextOcr;
+  if (invoice.rejectionCode) fields[INVOICE_ENTITY_FIELDS.ERROR_CODE] = invoice.rejectionCode;
+
+  return fields;
+}
+
+/**
+ * Transform Invoice to Airtable POInvoiceHeader format (legacy/backward compatibility)
  */
 export function transformInvoiceToAirtable(invoice: Partial<Invoice>): Record<string, any> {
   const fields: Record<string, any> = {};
 
   // Basic fields
-  if (invoice.invoiceNumber) fields[INVOICE_FIELDS.INVOICE_NUMBER] = invoice.invoiceNumber;
-  if (invoice.vendorName) fields[INVOICE_FIELDS.VENDOR_NAME] = invoice.vendorName;
-  if (invoice.vendorCode) fields[INVOICE_FIELDS.VENDOR_ID] = invoice.vendorCode;
-  if (invoice.amount !== undefined) fields[INVOICE_FIELDS.AMOUNT] = invoice.amount;
+  if (invoice.invoiceNumber) fields[PO_INVOICE_HEADER_FIELDS.INVOICE_NUMBER] = invoice.invoiceNumber;
+  if (invoice.vendorName) fields[PO_INVOICE_HEADER_FIELDS.VENDOR_NAME] = invoice.vendorName;
+  if (invoice.vendorCode) fields[PO_INVOICE_HEADER_FIELDS.VENDOR_ID] = invoice.vendorCode;
+  if (invoice.amount !== undefined) fields[PO_INVOICE_HEADER_FIELDS.AMOUNT] = invoice.amount;
   
-  // Map our internal status back to Airtable's capitalized values
-  // Keep the display names matching Airtable exactly
+  // Map our internal status back to Airtable's capitalized values for POInvoiceHeaders
   if (invoice.status) {
     const statusMap: Record<string, string> = {
-      'pending': 'Pending',
-      'open': 'Matched',       // Editable state
-      'reviewed': 'Reviewed',  // Locked, ready to export
-      'approved': 'Reviewed',  // Also maps to Reviewed
+      'pending': 'Queued',
+      'open': 'Queued',
+      'reviewed': 'Queued',
+      'approved': 'Queued',
       'exported': 'Exported',
       'rejected': 'Error',
     };
-    fields[INVOICE_FIELDS.STATUS] = statusMap[invoice.status] || 'Pending';
+    fields[PO_INVOICE_HEADER_FIELDS.STATUS] = statusMap[invoice.status] || 'Queued';
   }
 
   // Dates
   if (invoice.invoiceDate) {
-    fields[INVOICE_FIELDS.INVOICE_DATE] = invoice.invoiceDate.toISOString().split('T')[0];
+    fields[PO_INVOICE_HEADER_FIELDS.INVOICE_DATE] = invoice.invoiceDate.toISOString().split('T')[0];
   }
 
-  // GL Account is now in InvoiceDetails (line items), not in InvoiceHeaders
+  // GL Account is now in POInvoiceDetails (line items), not in POInvoiceHeaders
   // Omitting it here
 
   // Text fields
-  if (invoice.rawTextOcr) fields[INVOICE_FIELDS.DOCUMENT_RAW_TEXT] = invoice.rawTextOcr;
-  if (invoice.rejectionCode) fields[INVOICE_FIELDS.ERROR_CODE] = invoice.rejectionCode;
-  if (invoice.rejectionReason) fields[INVOICE_FIELDS.ERROR_REASON] = invoice.rejectionReason;
+  if (invoice.rawTextOcr) fields[PO_INVOICE_HEADER_FIELDS.DOCUMENT_RAW_TEXT] = invoice.rawTextOcr;
+  if (invoice.rejectionCode) fields[PO_INVOICE_HEADER_FIELDS.ERROR_CODE] = invoice.rejectionCode;
+  if (invoice.rejectionReason) fields[PO_INVOICE_HEADER_FIELDS.ERROR_REASON] = invoice.rejectionReason;
 
   // Team field no longer exists in new schema
   // Omitting it

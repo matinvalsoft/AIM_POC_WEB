@@ -4,6 +4,16 @@
  * DO NOT EDIT MANUALLY - Run 'node scripts/generate-schema-types.js' to regenerate
  */
 
+// Status constants for Invoice documents
+export const INVOICE_STATUS = {
+  PENDING: 'pending',
+  OPEN: 'open',
+  REVIEWED: 'reviewed',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  EXPORTED: 'exported',
+} as const;
+
 // Auto-generated field IDs from Airtable schema
 
 export const FIELD_IDS = {
@@ -24,8 +34,32 @@ export const FIELD_IDS = {
     CREATED_AT: 'fldPaMbKTIR1J6gAn',
     MODIFIED_AT: 'fldTqso4wgmGyPkUj',
     INVOICEHEADERS: 'fld8fYyXVZiKhNeDv',
+    INVOICES: 'fldwKImJnsRbsWjHj',
   },
-  INVOICEHEADERS: {
+  INVOICES: {
+    RECORDID: 'fldZ17knWjEOCfztq',
+    INVOICE_NUMBER: 'fldWJIn3Sb0JSCr2a',
+    VENDID: 'fldr9N3nkBSzTvOct',
+    VENDOR_NAME: 'fldgdPfsIPIu6GFrg',
+    AMOUNT: 'fldWskTDGmzu3udgQ',
+    DATE: 'fldp1dFsyYtFcMk63',
+    FREIGHT_CHARGE: 'fldmIOZypPrjc45MR',
+    SURCHARGE: 'fld0zGVtnSUl4YWva',
+    POS: 'fldmBwAkd2ekGDS3h',
+    DOCUMENT_RAW_TEXT: 'fldYajj2Ql4O3ZJNl',
+    FILES: 'fldvgp2k2Ro3xneyz',
+    CREATED_AT: 'fldQTWe0E9ik9t3SW',
+    MODIFIED_AT: 'fldtlqLgTn2IdBbkj',
+    MATCHJSONPAYLOAD: 'fldFxQNImfvsULyL2',
+    ERROR_CODE: 'fldBbD1mWcSqD5mn5',
+    STATUS: 'fldbeTDRDaKibT17s',
+    BALANCE: 'fldSjTjrW8Fso4j70',
+    BALANCE_EXPLANATION: 'fldySfNaohpv3gv4l',
+    POINVOICEHEADERS: 'fldzGkuubdu4lLy9n',
+    FILE_RAW_TEXT: 'fldUsIefXXVrL9ugZ',
+    MISSING_FIELDS: 'fldhUobiEpFG2S8E2',
+  },
+  POINVOICEHEADERS: {
     RECORDID: 'fldKuzxRLh9ebfwQ6',
     COMPANY_CODE: 'fldTxznaohx3570gT',
     STATUS: 'fldQG5aLrzWuybUGl',
@@ -67,19 +101,13 @@ export const FIELD_IDS = {
     CURYRATETYPE: 'fld17OblRg1DcLGV3',
     SURCHARGE: 'fld7hsHTZGxv2psSg',
     DOCUMENTATTACHMENT: 'flddZj4GmYKTIKa5p',
-    MATCHPAYLOADJSON: 'fldyFJ0B6tyrfZOHc',
     ERRORCODE: 'flddH7m8XIlXZLvkR',
-    EXPORTEDAT: 'fldKz7xwIQb7aWQxc',
-    FILES: 'fldmyaFCTdFTJ1fnf',
     DOCUMENT_RAW_TEXT: 'fldDGh2zVJXjpoTvX',
-    MISSING_FIELDS: 'fldb3JaRCNHzQ61gp',
-    ATTACHMENTS: 'fldMXV69XZLdIfE6Q',
-    FILE_RAW_TEXT: 'fldn6ThK0bCyWO8wR',
-    ERROR_REASON: 'fldCc76xkxbUe2GEY',
     CREATED_AT: 'fldTOi6cp2tzLromy',
     MODIFIED_AT: 'fld7UTUCBIDIP8bw4',
+    INVOICES: 'fldlDBkOm2QV6vSSc',
   },
-  INVOICEDETAILS: {
+  POINVOICEDETAILS: {
     RECORDID: 'flddeN1uf4flGhHNS',
     COMPANY_CODE: 'fldaagXjpyrRtsy8e',
     VENDID: 'fldKjuYXhgwv8fcLs',
@@ -110,33 +138,19 @@ export const FIELD_IDS = {
     PO_UOM: 'fldtC4OeorogNCBzW',
     INVOICED_IN_FULL_YN: 'fldTMFNrthWOMqwmt',
     GL_EXCEPTION_YN: 'fld3sBjJzVeqTA7p7',
-    STATE: 'fld3c6QiWMYO8fUrO',
-    FROM_FIELD_INVOICE_DETAILS: 'fldqaF4JwoyDondtz',
+    STATUS: 'fld3c6QiWMYO8fUrO',
     INVOICEHEADERS: 'fldS39vWDismMUvfC',
+    CREATED_AT: 'fld17mKjXewbTA0vy',
+    MODIFIED_AT: 'fldI3kD7U94DDThpi',
   },
-} as const;
-
-// Status value constants for InvoiceHeaders (new schema uses capitalized values)
-export const INVOICE_STATUS = {
-  PENDING: 'Pending',
-  MATCHED: 'Matched',
-  REVIEWED: 'Reviewed',
-  EXPORTED: 'Exported',
-  ERROR: 'Error'
-} as const;
-
-export const FILE_STATUS = {
-  QUEUED: 'Queued',
-  PROCESSING: 'Processing',
-  PROCESSED: 'Processed',
-  ATTENTION: 'Attention'
 } as const;
 
 // Table names
 export const TABLE_NAMES = {
   FILES: 'Files',
-  INVOICEHEADERS: 'InvoiceHeaders',
-  INVOICEDETAILS: 'InvoiceDetails',
+  INVOICES: 'Invoices',
+  POINVOICEHEADERS: 'POInvoiceHeaders',
+  POINVOICEDETAILS: 'POInvoiceDetails',
 } as const;
 
 // Airtable attachment type
@@ -155,7 +169,7 @@ export interface AirtableAttachment {
 
 export interface FilesFields {
   fileID: number;
-  invoiceHeaderID?: string[];
+  invoiceHeaderID?: string;
   fileURL?: string;
   fileHash?: string;
   fileName?: string;
@@ -170,9 +184,34 @@ export interface FilesFields {
   createdAt: string;
   modifiedAt?: string;
   invoiceHeaders?: string;
+  invoices?: string[];
 }
 
-export interface InvoiceHeadersFields {
+export interface InvoicesFields {
+  recordID: number;
+  invoiceNumber?: string;
+  vendId?: string;
+  vendorName?: string;
+  amount?: number;
+  date?: string;
+  freightCharge?: number;
+  surcharge?: number;
+  pOs?: string;
+  documentRawText?: string;
+  files?: string[];
+  createdAt: string;
+  modifiedAt?: string;
+  matchJSONPayload?: string;
+  errorCode?: string;
+  status?: string;
+  balance?: number;
+  balanceExplanation?: string;
+  pOInvoiceHeaders?: string[];
+  fileRawText?: any;
+  missingFields?: any;
+}
+
+export interface POInvoiceHeadersFields {
   recordID: number;
   companyCode?: string;
   status?: string;
@@ -214,20 +253,14 @@ export interface InvoiceHeadersFields {
   curyratetype?: string;
   surcharge?: number;
   documentAttachment?: string;
-  matchPayloadJSON?: string;
   errorCode?: string;
-  exportedAt?: string;
-  files?: string[];
   documentRawText?: string;
-  missingFields?: any;
-  attachments?: any;
-  fileRawText?: any;
-  errorReason?: string;
   createdAt: string;
   modifiedAt?: string;
+  invoices?: string[];
 }
 
-export interface InvoiceDetailsFields {
+export interface POInvoiceDetailsFields {
   recordID: number;
   companyCode?: string;
   vendId?: string;
@@ -258,14 +291,15 @@ export interface InvoiceDetailsFields {
   pOUOM?: string;
   invoicedInFullYN?: boolean;
   gLExceptionYN?: boolean;
-  state?: string;
-  fromFieldInvoiceDetails?: string;
+  status?: string;
   invoiceHeaders?: string[];
+  createdAt: string;
+  modifiedAt?: string;
 }
 
 export interface FilesRecord {
   fileID: number;
-  invoiceHeaderID?: string[];
+  invoiceHeaderID?: string;
   fileURL?: string;
   fileHash?: string;
   fileName?: string;
@@ -280,9 +314,34 @@ export interface FilesRecord {
   createdAt: string;
   modifiedAt?: string;
   invoiceHeaders?: string;
+  invoices?: string[];
 }
 
-export interface InvoiceHeadersRecord {
+export interface InvoicesRecord {
+  recordID: number;
+  invoiceNumber?: string;
+  vendId?: string;
+  vendorName?: string;
+  amount?: number;
+  date?: string;
+  freightCharge?: number;
+  surcharge?: number;
+  pOs?: string;
+  documentRawText?: string;
+  files?: string[];
+  createdAt: string;
+  modifiedAt?: string;
+  matchJSONPayload?: string;
+  errorCode?: string;
+  status?: string;
+  balance?: number;
+  balanceExplanation?: string;
+  pOInvoiceHeaders?: string[];
+  fileRawText?: any;
+  missingFields?: any;
+}
+
+export interface POInvoiceHeadersRecord {
   recordID: number;
   companyCode?: string;
   status?: string;
@@ -324,20 +383,14 @@ export interface InvoiceHeadersRecord {
   curyratetype?: string;
   surcharge?: number;
   documentAttachment?: string;
-  matchPayloadJSON?: string;
   errorCode?: string;
-  exportedAt?: string;
-  files?: string[];
   documentRawText?: string;
-  missingFields?: any;
-  attachments?: any;
-  fileRawText?: any;
-  errorReason?: string;
   createdAt: string;
   modifiedAt?: string;
+  invoices?: string[];
 }
 
-export interface InvoiceDetailsRecord {
+export interface POInvoiceDetailsRecord {
   recordID: number;
   companyCode?: string;
   vendId?: string;
@@ -368,8 +421,9 @@ export interface InvoiceDetailsRecord {
   pOUOM?: string;
   invoicedInFullYN?: boolean;
   gLExceptionYN?: boolean;
-  state?: string;
-  fromFieldInvoiceDetails?: string;
+  status?: string;
   invoiceHeaders?: string[];
+  createdAt: string;
+  modifiedAt?: string;
 }
 

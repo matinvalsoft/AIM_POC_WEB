@@ -268,7 +268,7 @@ export interface FileListItemProps {
     onRetry?: () => void;
 }
 
-export const FileListItemProgressBar = ({ name, size, progress, failed, isDuplicate, errorCode, errorDescription, type, fileIconVariant, onDelete, onRetry, className }: FileListItemProps) => {
+export const FileListItemProgressBar = ({ name, size, progress, failed, isDuplicate, errorCode, errorDescription, errorLink, type, fileIconVariant, onDelete, onRetry, className }: FileListItemProps) => {
     const isComplete = progress === 100;
 
     return (

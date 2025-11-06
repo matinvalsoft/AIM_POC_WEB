@@ -179,7 +179,158 @@ function getTableConfig(documentType: string): {
 }
 
 /**
+ * Create an Invoice record (primary entity) in the Invoices table
+ */
+export async function createInvoiceRecord(
+  doc: ParsedDocument,
+  fileRecordId: string,
+  documentRawText: string
+): Promise<string> {
+  
+  // Build the fields object using field names from Invoices table
+  const fields: Record<string, any> = {};
+  
+  // Link to the source file
+  fields['Files'] = [fileRecordId];
+  
+  // Set the document raw text
+  fields['Document Raw Text'] = documentRawText;
+  
+  // Common fields from parsed document
+  if (doc.invoice_number) {
+    fields['Invoice Number'] = doc.invoice_number;
+  }
+  
+  if (doc.vendor_name) {
+    fields['Vendor Name'] = doc.vendor_name;
+  }
+  
+  if (doc.invoice_date) {
+    fields['Date'] = doc.invoice_date;
+  }
+  
+  if (doc.amount) {
+    const amountNum = parseFloat(doc.amount);
+    if (!isNaN(amountNum)) {
+      fields['Amount'] = amountNum;
+    }
+  }
+  
+  // Set default status to 'Pending'
+  fields['Status'] = 'Pending';
+  
+  console.log(`📤 Creating Invoice record in Invoices table:`, {
+    invoiceNumber: doc.invoice_number,
+    vendor: doc.vendor_name,
+    amount: doc.amount,
+  });
+  
+  // Create the record using the existing API
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
+  const url = `${baseUrl}/api/airtable/Invoices?baseId=${BASE_ID}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ fields }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to create Invoice record: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const recordId = data.records?.[0]?.id || data.id;
+  console.log(`✅ Created Invoice record: ${recordId}`);
+  
+  return recordId;
+}
+
+/**
+ * Create a POInvoiceHeader record linked to an Invoice
+ */
+export async function createPOInvoiceHeaderRecord(
+  doc: ParsedDocument,
+  invoiceId: string,
+  fileRecordId: string,
+  documentRawText: string
+): Promise<string> {
+  
+  // Build the fields object using field names from POInvoiceHeaders table
+  const fields: Record<string, any> = {};
+  
+  // Link to the Invoice entity
+  fields['Invoices'] = [invoiceId];
+  
+  // Link to the source file
+  fields['Files'] = [fileRecordId];
+  
+  // Set the document raw text
+  fields['Document Raw Text'] = documentRawText;
+  
+  // Common fields from parsed document
+  if (doc.invoice_number) {
+    fields['AP-Invoice-Number'] = doc.invoice_number;
+  }
+  
+  if (doc.vendor_name) {
+    fields['Vendor Name'] = doc.vendor_name;
+  }
+  
+  if (doc.invoice_date) {
+    fields['Invoice-Date'] = doc.invoice_date;
+  }
+  
+  if (doc.amount) {
+    const amountNum = parseFloat(doc.amount);
+    if (!isNaN(amountNum)) {
+      fields['Total-Invoice-Amount'] = amountNum;
+    }
+  }
+  
+  // Set default status to 'Queued'
+  fields['Status'] = 'Queued';
+  
+  console.log(`📤 Creating POInvoiceHeader record linked to Invoice ${invoiceId}:`, {
+    invoiceNumber: doc.invoice_number,
+    vendor: doc.vendor_name,
+    amount: doc.amount,
+  });
+  
+  // Create the record using the existing API
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
+  const url = `${baseUrl}/api/airtable/POInvoiceHeaders?baseId=${BASE_ID}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ fields }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to create POInvoiceHeader record: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const recordId = data.records?.[0]?.id || data.id;
+  console.log(`✅ Created POInvoiceHeader record: ${recordId}`);
+  
+  return recordId;
+}
+
+/**
  * Create an Airtable record for a parsed document using the existing API
+ * DEPRECATED: Use createInvoiceRecord + createPOInvoiceHeaderRecord instead
  */
 export async function createDocumentRecord(
   doc: ParsedDocument,
@@ -275,10 +426,9 @@ export async function createDocumentRecord(
 }
 
 /**
- * Update the file record to link to created documents using the existing API
+ * Update the file record to link to created Invoices using the existing API
  * 
- * NOTE: In new schema, Files link to InvoiceHeaders only
- * Delivery Tickets and Store Receivers tables no longer exist
+ * NOTE: In new schema, Files link to Invoices table (not POInvoiceHeaders)
  */
 export async function linkDocumentsToFile(
   fileRecordId: string,
@@ -309,7 +459,7 @@ export async function linkDocumentsToFile(
       records: [{
         id: fileRecordId,
         fields: {
-          'InvoiceHeaderID': invoiceIds, // Correct field name from schema
+          'Invoices': invoiceIds, // Link to Invoices table (multipleRecordLinks)
         },
       }]
     }),
@@ -317,18 +467,21 @@ export async function linkDocumentsToFile(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to link documents to file: ${response.status} - ${errorText}`);
+    throw new Error(`Failed to link invoices to file: ${response.status} - ${errorText}`);
   }
 
   console.log(`✅ Linked ${invoiceIds.length} invoice(s) to file ${fileRecordId}`);
 }
 
 /**
- * Create InvoiceDetails records for an invoice's line items
+ * Create POInvoiceDetails records for a POInvoiceHeader's line items
+ * 
+ * NOTE: This should be called when POInvoiceHeader is created by AIM bridge,
+ * not during initial Invoice creation
  */
 export async function createInvoiceDetails(
   doc: ParsedDocument,
-  invoiceHeaderId: string
+  poInvoiceHeaderId: string
 ): Promise<string[]> {
   // Only create details for invoices with line items
   if (doc.document_type !== 'invoice' || !doc.line_items || doc.line_items.length === 0) {
@@ -336,22 +489,22 @@ export async function createInvoiceDetails(
     return [];
   }
 
-  console.log(`\n📋 Creating ${doc.line_items.length} invoice detail record(s)...`);
+  console.log(`\n📋 Creating ${doc.line_items.length} POInvoiceDetails record(s) for POInvoiceHeader...`);
   
   // Use VERCEL_URL for production, NEXTAUTH_URL for custom domains, or localhost for dev
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
-  const url = `${baseUrl}/api/airtable/InvoiceDetails?baseId=${BASE_ID}`;
+  const url = `${baseUrl}/api/airtable/${TABLE_NAMES.INVOICEDETAILS}?baseId=${BASE_ID}`;
   
   const createdDetailIds: string[] = [];
   
   for (let i = 0; i < doc.line_items.length; i++) {
     const lineItem = doc.line_items[i];
     
-    // Build fields object for InvoiceDetails using exact Airtable field names
+    // Build fields object for POInvoiceDetails using exact Airtable field names
     const fields: Record<string, any> = {
-      'InvoiceHeaders': [invoiceHeaderId], // Link to parent invoice
+      'InvoiceHeaders': [poInvoiceHeaderId], // Link to parent POInvoiceHeader
     };
     
     // Map line item fields to exact Airtable field names from schema

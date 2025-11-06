@@ -11,13 +11,7 @@
           "name": "FileID"
         },
         {
-          "type": "multipleRecordLinks",
-          "options": {
-            "linkedTableId": "tblJoCXc4S52J5h6L",
-            "isReversed": false,
-            "prefersSingleRecordLink": true,
-            "inverseLinkFieldId": "fldmyaFCTdFTJ1fnf"
-          },
+          "type": "singleLineText",
           "id": "fldfWuCdkpNQj9Ldk",
           "name": "InvoiceHeaderID"
         },
@@ -168,6 +162,17 @@
           "type": "singleLineText",
           "id": "fld8fYyXVZiKhNeDv",
           "name": "InvoiceHeaders"
+        },
+        {
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableId": "tblNKS2pOwcisNWJJ",
+            "isReversed": false,
+            "prefersSingleRecordLink": false,
+            "inverseLinkFieldId": "fldvgp2k2Ro3xneyz"
+          },
+          "id": "fldwKImJnsRbsWjHj",
+          "name": "Invoices"
         }
       ],
       "views": [
@@ -179,8 +184,245 @@
       ]
     },
     {
+      "id": "tblNKS2pOwcisNWJJ",
+      "name": "Invoices",
+      "primaryFieldId": "fldZ17knWjEOCfztq",
+      "fields": [
+        {
+          "type": "autoNumber",
+          "id": "fldZ17knWjEOCfztq",
+          "name": "RecordID"
+        },
+        {
+          "type": "singleLineText",
+          "id": "fldWJIn3Sb0JSCr2a",
+          "name": "Invoice Number"
+        },
+        {
+          "type": "singleLineText",
+          "id": "fldr9N3nkBSzTvOct",
+          "name": "VendId"
+        },
+        {
+          "type": "singleLineText",
+          "id": "fldgdPfsIPIu6GFrg",
+          "name": "Vendor Name"
+        },
+        {
+          "type": "currency",
+          "options": {
+            "precision": 2,
+            "symbol": "$"
+          },
+          "id": "fldWskTDGmzu3udgQ",
+          "name": "Amount"
+        },
+        {
+          "type": "date",
+          "options": {
+            "dateFormat": {
+              "name": "local",
+              "format": "l"
+            }
+          },
+          "id": "fldp1dFsyYtFcMk63",
+          "name": "Date"
+        },
+        {
+          "type": "currency",
+          "options": {
+            "precision": 2,
+            "symbol": "$"
+          },
+          "id": "fldmIOZypPrjc45MR",
+          "name": "Freight Charge"
+        },
+        {
+          "type": "currency",
+          "options": {
+            "precision": 2,
+            "symbol": "$"
+          },
+          "id": "fld0zGVtnSUl4YWva",
+          "name": "Surcharge"
+        },
+        {
+          "type": "multilineText",
+          "id": "fldmBwAkd2ekGDS3h",
+          "name": "POs"
+        },
+        {
+          "type": "multilineText",
+          "id": "fldYajj2Ql4O3ZJNl",
+          "name": "Document Raw Text"
+        },
+        {
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableId": "tblMNDY3eCvIwSdA8",
+            "isReversed": false,
+            "prefersSingleRecordLink": false,
+            "inverseLinkFieldId": "fldwKImJnsRbsWjHj"
+          },
+          "id": "fldvgp2k2Ro3xneyz",
+          "name": "Files"
+        },
+        {
+          "type": "createdTime",
+          "options": {
+            "result": {
+              "type": "dateTime",
+              "options": {
+                "dateFormat": {
+                  "name": "local",
+                  "format": "l"
+                },
+                "timeFormat": {
+                  "name": "12hour",
+                  "format": "h:mma"
+                },
+                "timeZone": "client"
+              }
+            }
+          },
+          "id": "fldQTWe0E9ik9t3SW",
+          "name": "Created At"
+        },
+        {
+          "type": "lastModifiedTime",
+          "options": {
+            "isValid": true,
+            "referencedFieldIds": [],
+            "result": {
+              "type": "dateTime",
+              "options": {
+                "dateFormat": {
+                  "name": "local",
+                  "format": "l"
+                },
+                "timeFormat": {
+                  "name": "12hour",
+                  "format": "h:mma"
+                },
+                "timeZone": "client"
+              }
+            }
+          },
+          "id": "fldtlqLgTn2IdBbkj",
+          "name": "Modified At"
+        },
+        {
+          "type": "multilineText",
+          "id": "fldFxQNImfvsULyL2",
+          "name": "MatchJSONPayload"
+        },
+        {
+          "type": "singleLineText",
+          "id": "fldBbD1mWcSqD5mn5",
+          "name": "Error Code"
+        },
+        {
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "id": "sel6UEDu8LjRGUy29",
+                "name": "Pending",
+                "color": "blueLight2"
+              },
+              {
+                "id": "selWZbvi8DeTcKAZD",
+                "name": "Matched",
+                "color": "cyanLight2"
+              },
+              {
+                "id": "selYO0ztfxDnTgiby",
+                "name": "Queued",
+                "color": "tealLight2"
+              },
+              {
+                "id": "selPuqnjahOulXqbY",
+                "name": "Exported",
+                "color": "greenLight2"
+              },
+              {
+                "id": "selC4DYl4h7ZyjUfk",
+                "name": "Error",
+                "color": "yellowLight2"
+              }
+            ]
+          },
+          "id": "fldbeTDRDaKibT17s",
+          "name": "Status"
+        },
+        {
+          "type": "currency",
+          "options": {
+            "precision": 2,
+            "symbol": "$"
+          },
+          "id": "fldSjTjrW8Fso4j70",
+          "name": "Balance"
+        },
+        {
+          "type": "singleLineText",
+          "id": "fldySfNaohpv3gv4l",
+          "name": "Balance Explanation"
+        },
+        {
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableId": "tblJoCXc4S52J5h6L",
+            "isReversed": false,
+            "prefersSingleRecordLink": false,
+            "inverseLinkFieldId": "fldlDBkOm2QV6vSSc"
+          },
+          "id": "fldzGkuubdu4lLy9n",
+          "name": "POInvoiceHeaders"
+        },
+        {
+          "type": "multipleLookupValues",
+          "options": {
+            "isValid": true,
+            "recordLinkFieldId": "fldvgp2k2Ro3xneyz",
+            "fieldIdInLinkedTable": "fld1lL5zRXtTbt0A3",
+            "result": {
+              "type": "multilineText"
+            }
+          },
+          "id": "fldUsIefXXVrL9ugZ",
+          "name": "File Raw Text"
+        },
+        {
+          "type": "formula",
+          "options": {
+            "isValid": true,
+            "formula": "IF(\n  TRIM(\n    IF({fldgdPfsIPIu6GFrg} = \"\", \"Vendor Name, \") &\n    IF({fldp1dFsyYtFcMk63} = \"\", \"Invoice Date, \") &\n    IF({fldWskTDGmzu3udgQ} = \"\", \"Amount, \") &\n    IF({fldWJIn3Sb0JSCr2a} = \"\", \"Invoice Number, \")\n  ) = \"\",\n  \"\",\n  LEFT(\n    TRIM(\n      IF({fldgdPfsIPIu6GFrg} = \"\", \"Vendor Name, \") &\n      IF({fldp1dFsyYtFcMk63} = \"\", \"Invoice Date, \") &\n      IF({fldWskTDGmzu3udgQ} = \"\", \"Amount, \") &\n      IF({fldWJIn3Sb0JSCr2a} = \"\", \"Invoice Number, \")\n    ),\n    LEN(\n      TRIM(\n        IF({fldgdPfsIPIu6GFrg} = \"\", \"Vendor Name, \") &\n        IF({fldp1dFsyYtFcMk63} = \"\", \"Invoice Date, \") &\n        IF({fldWskTDGmzu3udgQ} = \"\", \"Amount, \") &\n        IF({fldWJIn3Sb0JSCr2a} = \"\", \"Invoice Number, \")\n      )\n    ) - 1\n  )\n)",
+            "referencedFieldIds": [
+              "fldgdPfsIPIu6GFrg",
+              "fldp1dFsyYtFcMk63",
+              "fldWskTDGmzu3udgQ",
+              "fldWJIn3Sb0JSCr2a"
+            ],
+            "result": {
+              "type": "singleLineText"
+            }
+          },
+          "id": "fldhUobiEpFG2S8E2",
+          "name": "Missing Fields"
+        }
+      ],
+      "views": [
+        {
+          "id": "viwArnyxHQKOYuzRT",
+          "name": "Grid view",
+          "type": "grid"
+        }
+      ]
+    },
+    {
       "id": "tblJoCXc4S52J5h6L",
-      "name": "InvoiceHeaders",
+      "name": "POInvoiceHeaders",
       "primaryFieldId": "fldKuzxRLh9ebfwQ6",
       "fields": [
         {
@@ -198,24 +440,14 @@
           "options": {
             "choices": [
               {
-                "id": "selnlcjjz4zh4UCqq",
-                "name": "Pending",
-                "color": "blueLight2"
-              },
-              {
-                "id": "sel95Vop7UOaomEB0",
-                "name": "Matched",
-                "color": "cyanLight2"
-              },
-              {
-                "id": "selfWG2uszSiUO8hb",
-                "name": "Reviewed",
-                "color": "tealLight2"
-              },
-              {
                 "id": "selHV3TBGln1G5c2f",
-                "name": "Exported",
+                "name": "Queued",
                 "color": "greenLight2"
+              },
+              {
+                "id": "self9T7hrCBjzpiL6",
+                "name": "Exported",
+                "color": "blueLight2"
               },
               {
                 "id": "sel8MzzatJYdMggRJ",
@@ -509,99 +741,14 @@
           "name": "DocumentAttachment"
         },
         {
-          "type": "multilineText",
-          "id": "fldyFJ0B6tyrfZOHc",
-          "name": "MatchPayloadJSON"
-        },
-        {
           "type": "singleLineText",
           "id": "flddH7m8XIlXZLvkR",
           "name": "ErrorCode"
         },
         {
-          "type": "dateTime",
-          "options": {
-            "dateFormat": {
-              "name": "iso",
-              "format": "YYYY-MM-DD"
-            },
-            "timeFormat": {
-              "name": "12hour",
-              "format": "h:mma"
-            },
-            "timeZone": "utc"
-          },
-          "id": "fldKz7xwIQb7aWQxc",
-          "name": "ExportedAt"
-        },
-        {
-          "type": "multipleRecordLinks",
-          "options": {
-            "linkedTableId": "tblMNDY3eCvIwSdA8",
-            "isReversed": false,
-            "prefersSingleRecordLink": false,
-            "inverseLinkFieldId": "fldfWuCdkpNQj9Ldk"
-          },
-          "id": "fldmyaFCTdFTJ1fnf",
-          "name": "Files"
-        },
-        {
           "type": "multilineText",
           "id": "fldDGh2zVJXjpoTvX",
           "name": "Document Raw Text"
-        },
-        {
-          "type": "formula",
-          "options": {
-            "isValid": true,
-            "formula": "IF(\n  TRIM(\n    IF({fldoQDBbjtB45u8Y0} = \"\", \"Vendor Name, \") &\n    IF({fldHqAuDgGiFwEbNu} = \"\", \"Vendor ID, \") &\n    IF({fld965jyW6vfHSzve} = \"\", \"Invoice Date, \") &\n    IF({fldCm1wXZcP8By64B} = \"\", \"Amount, \") &\n    IF({fldeLVE34jFJIZ4mt} = \"\", \"Invoice Number, \")\n  ) = \"\",\n  \"\",\n  LEFT(\n    TRIM(\n      IF({fldoQDBbjtB45u8Y0} = \"\", \"Vendor Name, \") &\n      IF({fldHqAuDgGiFwEbNu} = \"\", \"Vendor ID, \") &\n      IF({fld965jyW6vfHSzve} = \"\", \"Invoice Date, \") &\n      IF({fldCm1wXZcP8By64B} = \"\", \"Amount, \") &\n      IF({fldeLVE34jFJIZ4mt} = \"\", \"Invoice Number, \")\n    ),\n    LEN(\n      TRIM(\n        IF({fldoQDBbjtB45u8Y0} = \"\", \"Vendor Name, \") &\n        IF({fldHqAuDgGiFwEbNu} = \"\", \"Vendor ID, \") &\n        IF({fld965jyW6vfHSzve} = \"\", \"Invoice Date, \") &\n        IF({fldCm1wXZcP8By64B} = \"\", \"Amount, \") &\n        IF({fldeLVE34jFJIZ4mt} = \"\", \"Invoice Number, \")\n      )\n    ) - 1\n  )\n)",
-            "referencedFieldIds": [
-              "fldoQDBbjtB45u8Y0",
-              "fldHqAuDgGiFwEbNu",
-              "fld965jyW6vfHSzve",
-              "fldCm1wXZcP8By64B",
-              "fldeLVE34jFJIZ4mt"
-            ],
-            "result": {
-              "type": "singleLineText"
-            }
-          },
-          "id": "fldb3JaRCNHzQ61gp",
-          "name": "Missing Fields"
-        },
-        {
-          "type": "multipleLookupValues",
-          "options": {
-            "isValid": true,
-            "recordLinkFieldId": "fldmyaFCTdFTJ1fnf",
-            "fieldIdInLinkedTable": "fld3draNU7mkLeGqI",
-            "result": {
-              "type": "multipleAttachments",
-              "options": {
-                "isReversed": false
-              }
-            }
-          },
-          "id": "fldMXV69XZLdIfE6Q",
-          "name": "Attachments"
-        },
-        {
-          "type": "multipleLookupValues",
-          "options": {
-            "isValid": true,
-            "recordLinkFieldId": "fldmyaFCTdFTJ1fnf",
-            "fieldIdInLinkedTable": "fld1lL5zRXtTbt0A3",
-            "result": {
-              "type": "multilineText"
-            }
-          },
-          "id": "fldn6ThK0bCyWO8wR",
-          "name": "File Raw Text"
-        },
-        {
-          "type": "singleLineText",
-          "id": "fldCc76xkxbUe2GEY",
-          "name": "Error Reason"
         },
         {
           "type": "createdTime",
@@ -646,6 +793,17 @@
           },
           "id": "fld7UTUCBIDIP8bw4",
           "name": "Modified At"
+        },
+        {
+          "type": "multipleRecordLinks",
+          "options": {
+            "linkedTableId": "tblNKS2pOwcisNWJJ",
+            "isReversed": false,
+            "prefersSingleRecordLink": false,
+            "inverseLinkFieldId": "fldzGkuubdu4lLy9n"
+          },
+          "id": "fldlDBkOm2QV6vSSc",
+          "name": "Invoices"
         }
       ],
       "views": [
@@ -658,7 +816,7 @@
     },
     {
       "id": "tblRkwaiS3LcFFrZ9",
-      "name": "InvoiceDetails",
+      "name": "POInvoiceDetails",
       "primaryFieldId": "flddeN1uf4flGhHNS",
       "fields": [
         {
@@ -863,34 +1021,24 @@
           "options": {
             "choices": [
               {
-                "id": "selsfQTbz38spfHwi",
-                "name": "unmatched",
+                "id": "selrnXfftH9m6PROu",
+                "name": "Queued",
                 "color": "blueLight2"
               },
               {
-                "id": "selsJEBDkYoBzIrap",
-                "name": "matched",
+                "id": "sel3KoF2eXVFC4kKf",
+                "name": "Exported",
                 "color": "cyanLight2"
               },
               {
-                "id": "selmLOGWmYuckpUaE",
-                "name": "exported",
+                "id": "selL7lf9M3lVVKfaU",
+                "name": "Error",
                 "color": "tealLight2"
-              },
-              {
-                "id": "selaNojBJ4bCTPAiY",
-                "name": "error",
-                "color": "greenLight2"
               }
             ]
           },
           "id": "fld3c6QiWMYO8fUrO",
-          "name": "State"
-        },
-        {
-          "type": "singleLineText",
-          "id": "fldqaF4JwoyDondtz",
-          "name": "From field: Invoice Details"
+          "name": "Status"
         },
         {
           "type": "multipleRecordLinks",
@@ -902,6 +1050,50 @@
           },
           "id": "fldS39vWDismMUvfC",
           "name": "InvoiceHeaders"
+        },
+        {
+          "type": "createdTime",
+          "options": {
+            "result": {
+              "type": "dateTime",
+              "options": {
+                "dateFormat": {
+                  "name": "local",
+                  "format": "l"
+                },
+                "timeFormat": {
+                  "name": "12hour",
+                  "format": "h:mma"
+                },
+                "timeZone": "client"
+              }
+            }
+          },
+          "id": "fld17mKjXewbTA0vy",
+          "name": "Created At"
+        },
+        {
+          "type": "lastModifiedTime",
+          "options": {
+            "isValid": true,
+            "referencedFieldIds": [],
+            "result": {
+              "type": "dateTime",
+              "options": {
+                "dateFormat": {
+                  "name": "local",
+                  "format": "l"
+                },
+                "timeFormat": {
+                  "name": "12hour",
+                  "format": "h:mma"
+                },
+                "timeZone": "client"
+              }
+            }
+          },
+          "id": "fldI3kD7U94DDThpi",
+          "name": "Modified At"
         }
       ],
       "views": [

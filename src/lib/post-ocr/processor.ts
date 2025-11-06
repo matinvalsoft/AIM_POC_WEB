@@ -3,22 +3,23 @@
  * 
  * Takes a processed file record and:
  * 1. Parses the raw OCR text with LLM
- * 2. Creates Airtable records for each document
+ * 2. Creates Invoice records in Invoices table (primary entity)
  * 3. Handles single vs multiple documents
- * 4. Links documents back to the file
+ * 4. Links invoices back to the file
+ * 
+ * Note: POInvoiceHeader creation happens LATER via AIM bridge after MatchJSONPayload is provided
  */
 
 import { parseDocuments, extractSingleDocumentText } from '../llm/parser';
-import { getFileRecord, createDocumentRecord, linkDocumentsToFile, createInvoiceDetails } from './airtable-helpers';
+import { getFileRecord, createInvoiceRecord, linkDocumentsToFile, createInvoiceDetails } from './airtable-helpers';
 import { FIELD_IDS } from '../airtable/schema-types';
 import type { ParsedDocument } from '../llm/schemas';
 
 export interface ProcessFileResult {
   success: boolean;
   fileRecordId: string;
-  documentsCreated: number;
-  documentIds: { type: string; id: string }[];
-  detailsCreated?: number; // Track number of invoice details created
+  invoicesCreated: number; // Changed from documentsCreated
+  invoiceIds: { type: string; id: string }[]; // Changed from documentIds
   error?: string;
   details?: any;
 }
@@ -79,20 +80,19 @@ export async function processPostOCR(fileRecordId: string): Promise<ProcessFileR
       console.log('📄 Single document detected - using full raw text\n');
     }
 
-    // Step 4: Create Airtable records
-    console.log('💾 Step 3: Creating Airtable records...');
-    const createdDocuments: { type: string; id: string }[] = [];
-    let totalDetailsCreated = 0;
+    // Step 4: Create Invoice records (primary entity only)
+    console.log('💾 Step 3: Creating Invoice records in Invoices table...');
+    const createdInvoices: { type: string; id: string }[] = [];
     
     for (let i = 0; i < parsedDocuments.length; i++) {
       const doc = parsedDocuments[i];
-      console.log(`\n  Processing document ${i + 1}/${parsedDocuments.length}...`);
+      console.log(`\n  Processing invoice ${i + 1}/${parsedDocuments.length}...`);
       
       let documentRawText: string;
       
       if (isMultipleDocuments) {
         // Extract individual document text
-        console.log(`  🔍 Extracting text for individual document...`);
+        console.log(`  🔍 Extracting text for individual invoice...`);
         documentRawText = await extractSingleDocumentText(rawText, doc);
         console.log(`  ✅ Extracted ${documentRawText.length} chars`);
       } else {
@@ -101,53 +101,45 @@ export async function processPostOCR(fileRecordId: string): Promise<ProcessFileR
         console.log(`  ✅ Using full file text (${documentRawText.length} chars)`);
       }
       
-      // Create the Airtable record for the invoice header
-      const recordId = await createDocumentRecord(doc, fileRecordId, documentRawText);
+      // Create the Invoice record (primary entity)
+      const invoiceId = await createInvoiceRecord(doc, fileRecordId, documentRawText);
       
-      createdDocuments.push({
-        type: doc.document_type,
-        id: recordId,
+      createdInvoices.push({
+        type: 'invoice',
+        id: invoiceId,
       });
       
-      // If this is an invoice with line items, create invoice details
-      if (doc.document_type === 'invoice' && doc.line_items && doc.line_items.length > 0) {
-        console.log(`\n  📋 Processing ${doc.line_items.length} line item(s) for invoice...`);
-        const detailIds = await createInvoiceDetails(doc, recordId);
-        totalDetailsCreated += detailIds.length;
-        console.log(`  ✅ Created ${detailIds.length} invoice detail record(s)`);
-      }
+      console.log(`  ✅ Created Invoice record: ${invoiceId}`);
+      console.log(`  ℹ️  POInvoiceHeader will be created later by AIM bridge`);
     }
     
-    console.log(`\n✅ Created ${createdDocuments.length} Airtable record(s)\n`);
+    console.log(`\n✅ Created ${createdInvoices.length} Invoice record(s)\n`);
 
-    // Step 5: Link documents back to file
-    console.log('🔗 Step 4: Linking documents to file record...');
-    await linkDocumentsToFile(fileRecordId, createdDocuments);
-    console.log('✅ Documents linked to file\n');
+    // Step 5: Link invoices back to file
+    console.log('🔗 Step 4: Linking invoices to file record...');
+    await linkDocumentsToFile(fileRecordId, createdInvoices);
+    console.log('✅ Invoices linked to file\n');
 
     console.log(`${'='.repeat(60)}`);
     console.log(`✅ Post-OCR processing completed successfully!`);
     console.log(`   File: ${fileRecordId}`);
-    console.log(`   Documents created: ${createdDocuments.length}`);
-    if (totalDetailsCreated > 0) {
-      console.log(`   Invoice details created: ${totalDetailsCreated}`);
-    }
+    console.log(`   Invoices created: ${createdInvoices.length}`);
+    console.log(`   Note: POInvoiceHeaders will be created by AIM bridge`);
     console.log(`${'='.repeat(60)}\n`);
 
     return {
       success: true,
       fileRecordId,
-      documentsCreated: createdDocuments.length,
-      documentIds: createdDocuments,
-      detailsCreated: totalDetailsCreated,
+      invoicesCreated: createdInvoices.length,
+      invoiceIds: createdInvoices,
       details: {
-        documents: parsedDocuments.map((doc, idx) => ({
+        invoices: parsedDocuments.map((doc, idx) => ({
           index: idx + 1,
           type: doc.document_type,
           vendor: doc.vendor_name,
           invoiceNumber: doc.invoice_number,
           amount: doc.amount,
-          recordId: createdDocuments[idx]?.id,
+          invoiceId: createdInvoices[idx]?.id,
           lineItemsCount: doc.line_items?.length || 0,
         })),
       },
@@ -159,8 +151,8 @@ export async function processPostOCR(fileRecordId: string): Promise<ProcessFileR
     return {
       success: false,
       fileRecordId,
-      documentsCreated: 0,
-      documentIds: [],
+      invoicesCreated: 0,
+      invoiceIds: [],
       error: error instanceof Error ? error.message : String(error),
     };
   }
