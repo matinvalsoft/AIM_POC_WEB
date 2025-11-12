@@ -10,7 +10,8 @@ import { setRecordError } from '@/lib/airtable/error-handler';
 export const runtime = 'nodejs';
 
 // Set maximum execution time to 300 seconds (5 minutes) for file upload and OCR processing
-// OCR processing is triggered synchronously and can take up to 300 seconds
+// Hobby plan with Fluid Compute: max is 300s (5 minutes)
+// OCR processing is triggered asynchronously (fire-and-forget)
 export const maxDuration = 300;
 
 /**

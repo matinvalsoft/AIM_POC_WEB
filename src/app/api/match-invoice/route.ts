@@ -18,7 +18,7 @@ import { POMatchingRequest, POMatchingResponse } from '@/lib/types/po-matching';
 import { TABLE_NAMES } from '@/lib/airtable/schema-types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60; // Allow up to 60 seconds for OpenAI processing
+export const maxDuration = 300; // Maximum for Hobby plan with Fluid Compute (5 minutes)
 
 // Environment variables
 const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
