@@ -9,6 +9,9 @@ import { OcrLLM } from 'ocr-llm';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { createCanvas } from 'canvas';
 
+// Disable worker for serverless environment (use main thread)
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+
 const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TOKEN = process.env.AIRTABLE_PAT;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -31,6 +34,9 @@ async function pdfToImages(pdfBuffer: Buffer): Promise<Buffer[]> {
     const loadingTask = pdfjsLib.getDocument({
       data: new Uint8Array(pdfBuffer),
       useSystemFonts: true,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      disableWorker: true,
     });
     
     const pdfDocument = await loadingTask.promise;
