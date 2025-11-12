@@ -4,7 +4,7 @@
  */
 
 import { PNG } from 'pngjs';
-import { PDFiumLibrary } from '@hyzyla/pdfium';
+import PDFiumLibrary from '@hyzyla/pdfium';
 
 /**
  * Convert raw RGBA to PNG
