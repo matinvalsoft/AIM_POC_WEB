@@ -5,17 +5,24 @@
 import { FIELD_IDS, TABLE_NAMES } from '../airtable/schema-types';
 import type { ParsedDocument } from '../llm/schemas';
 
-const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TOKEN = process.env.AIRTABLE_PAT;
 
-if (!BASE_ID) {
-  throw new Error('Airtable BASE_ID is not configured');
+/**
+ * Get BASE_ID from environment variables (runtime check)
+ */
+function getBaseId(): string {
+  const baseId = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
+  if (!baseId) {
+    throw new Error('Airtable BASE_ID is not configured');
+  }
+  return baseId;
 }
 
 /**
  * Fetch a file record from Airtable using the existing API endpoint
  */
 export async function getFileRecord(fileRecordId: string): Promise<any> {
+  const BASE_ID = getBaseId();
   // Use VERCEL_URL for production, NEXTAUTH_URL for custom domains, or localhost for dev
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
@@ -74,6 +81,7 @@ export async function findTeamByName(teamName: string): Promise<string | null> {
   }
 
   try {
+    const BASE_ID = getBaseId();
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const url = `${baseUrl}/api/airtable/${TABLE_NAMES.TEAMS}?baseId=${BASE_ID}&maxRecords=50`;
 
@@ -246,6 +254,7 @@ export async function createInvoiceRecord(
   });
   
   // Create the record using the existing API
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
@@ -318,6 +327,7 @@ export async function createPOInvoiceHeaderRecord(
   });
   
   // Create the record using the existing API
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
@@ -435,6 +445,7 @@ export async function createDocumentRecord(
   
   // Create the record using the existing API
   // Use VERCEL_URL for production, NEXTAUTH_URL for custom domains, or localhost for dev
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
@@ -480,6 +491,7 @@ export async function linkDocumentsToFile(
   }
   
   // Use VERCEL_URL for production, NEXTAUTH_URL for custom domains, or localhost for dev
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
@@ -527,6 +539,7 @@ export async function createInvoiceDetails(
   console.log(`\n📋 Creating ${doc.line_items.length} POInvoiceDetails record(s) for POInvoiceHeader...`);
   
   // Use VERCEL_URL for production, NEXTAUTH_URL for custom domains, or localhost for dev
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');

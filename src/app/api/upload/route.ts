@@ -10,22 +10,20 @@ import { setRecordError } from '@/lib/airtable/error-handler';
 export const runtime = 'nodejs';
 
 // Set maximum execution time to 300 seconds (5 minutes) for file upload and OCR processing
-// Hobby plan with Fluid Compute: max is 300s (5 minutes)
-// OCR processing is triggered asynchronously (fire-and-forget)
+// OCR processing is triggered synchronously and can take up to 300 seconds
 export const maxDuration = 300;
 
 /**
- * Trigger OCR processing for a file
+ * Trigger OCR processing for a file using OCR3
  */
 async function triggerOCRProcessing(recordId: string, fileUrl: string, baseUrl: string): Promise<void> {
   try {
-    console.log(`🚀 Starting OCR processing for record ${recordId}`);
-    const ocrEndpoint = `${baseUrl}/api/ocr2/process`;
+    console.log(`🚀 Starting OCR3 processing for record ${recordId}`);
+    const ocrEndpoint = `${baseUrl}/api/ocr3`;
     console.log(`📍 OCR endpoint: ${ocrEndpoint}`);
     
     const requestBody = {
-      record_id: recordId,
-      file_url: fileUrl
+      recordId: recordId
     };
     console.log(`📤 Request body:`, JSON.stringify(requestBody));
     
@@ -78,13 +76,13 @@ async function triggerOCRProcessing(recordId: string, fileUrl: string, baseUrl: 
     }
 
     const result = JSON.parse(responseText);
-    console.log(`✅ OCR processing completed for record ${recordId}:`, {
-      textLength: result.extracted_text_length,
-      airtableUpdated: result.airtable_updated,
+    console.log(`✅ OCR3 processing completed for record ${recordId}:`, {
+      textLength: result.textLength,
+      pageCount: result.pageCount,
       message: result.message
     });
   } catch (error) {
-    console.error(`❌ OCR processing failed for record ${recordId}:`, error);
+    console.error(`❌ OCR3 processing failed for record ${recordId}:`, error);
     console.error(`❌ Error type: ${error?.constructor?.name}`);
     console.error(`❌ Error message: ${error instanceof Error ? error.message : String(error)}`);
     console.error(`❌ Error stack:`, error instanceof Error ? error.stack : 'No stack trace');

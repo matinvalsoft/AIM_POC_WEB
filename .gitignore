@@ -52,3 +52,4 @@ quarantine/
 
 # Archive files
 *.zip
+.env.vercel

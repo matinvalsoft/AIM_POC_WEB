@@ -18,20 +18,28 @@ import { POMatchingRequest, POMatchingResponse } from '@/lib/types/po-matching';
 import { TABLE_NAMES } from '@/lib/airtable/schema-types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300; // Maximum for Hobby plan with Fluid Compute (5 minutes)
+export const dynamic = 'force-dynamic'; // Force dynamic rendering to prevent build-time analysis
+export const maxDuration = 60; // Allow up to 60 seconds for OpenAI processing
 
 // Environment variables
-const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TOKEN = process.env.AIRTABLE_PAT;
 
-if (!BASE_ID) {
-  throw new Error('Airtable BASE_ID is not configured');
+/**
+ * Get BASE_ID from environment variables (runtime check)
+ */
+function getBaseId(): string {
+  const baseId = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
+  if (!baseId) {
+    throw new Error('Airtable BASE_ID is not configured');
+  }
+  return baseId;
 }
 
 /**
  * Fetch an invoice record from Airtable
  */
 async function fetchInvoice(invoiceId: string): Promise<any> {
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
@@ -60,6 +68,7 @@ async function createRecords(
   tableName: string, 
   records: Array<{ fields: Record<string, any> }>
 ): Promise<{ records: Array<{ id: string }> }> {
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
@@ -90,6 +99,7 @@ async function updateInvoice(
   invoiceId: string,
   fields: Record<string, any>
 ): Promise<void> {
+  const BASE_ID = getBaseId();
   const baseUrl = process.env.VERCEL_URL 
     ? `https://${process.env.VERCEL_URL}`
     : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
@@ -227,8 +237,10 @@ export async function GET() {
     },
     environment: {
       openai_configured: !!process.env.OPENAI_API_KEY,
-      airtable_configured: !!BASE_ID,
-      base_id: BASE_ID ? `${BASE_ID.substring(0, 6)}...` : 'not configured',
+      airtable_configured: !!(process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID),
+      base_id: (process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID) 
+        ? `${(process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID)!.substring(0, 6)}...` 
+        : 'not configured',
     },
   });
 }

@@ -14,7 +14,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processPostOCR } from '@/lib/post-ocr/processor';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300; // Maximum for Hobby plan with Fluid Compute (5 minutes)
+export const dynamic = 'force-dynamic'; // Force dynamic rendering to prevent build-time analysis
+export const maxDuration = 60; // Allow up to 60 seconds for LLM processing
 
 /**
  * POST /api/post-ocr/process
