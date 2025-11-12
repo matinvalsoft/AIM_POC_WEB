@@ -78,7 +78,7 @@ async function triggerOCRProcessing(recordId: string, fileUrl: string, baseUrl: 
     const result = JSON.parse(responseText);
     console.log(`✅ OCR3 processing completed for record ${recordId}:`, {
       textLength: result.textLength,
-      pageCount: result.pageCount,
+      ocrTimeMs: result.ocrTimeMs,
       message: result.message
     });
   } catch (error) {

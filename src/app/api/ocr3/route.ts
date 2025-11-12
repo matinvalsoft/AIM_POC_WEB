@@ -6,10 +6,10 @@
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes for large PDFs
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { renderPdfToPngs } from '@/lib/ocr3/pdf-to-png';
 
 const BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID || process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TOKEN = process.env.AIRTABLE_PAT;
@@ -110,32 +110,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Render PDF to high-DPI PNGs
-    console.log('🖼️  OCR3: Rendering PDF to PNGs...');
-    const startRender = Date.now();
-    const scale = 4; // 288 dpi
-    const maxPages = 50; // Cap to avoid huge requests
-    
-    const pdfBytes = new Uint8Array(fileBuffer);
-    const pngBuffers = await renderPdfToPngs(pdfBytes, scale, maxPages);
-    
-    const renderTime = Date.now() - startRender;
-    console.log(`✅ OCR3: Rendered ${pngBuffers.length} pages in ${renderTime}ms`);
-
-    // Build image inputs as base64 for GPT-4o
-    console.log('🔍 OCR3: Preparing images for OCR...');
-    const imageInputs = pngBuffers.map((buf) => ({
-      type: 'image_url' as const,
-      image_url: {
-        url: `data:image/png;base64,${buf.toString('base64')}`,
-      },
-    }));
-
-    // OCR with GPT-4o
-    console.log('🤖 OCR3: Running OCR with GPT-4o...');
+    // Convert PDF to base64 for GPT-4o
+    console.log('🔍 OCR3: Preparing PDF for GPT-4o...');
     const startOcr = Date.now();
+    const pdfBase64 = Buffer.from(fileBuffer).toString('base64');
     
-    const prompt = 'Perform OCR on these pages. Output ONLY the raw text in reading order. No commentary.';
+    // Send PDF directly to GPT-4o (it can handle PDFs natively)
+    console.log('🤖 OCR3: Running OCR with GPT-4o on PDF...');
+    
+    const prompt = 'Perform OCR on this PDF document. Extract ALL text in reading order. Output ONLY the raw text, no commentary or formatting.';
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -144,7 +127,12 @@ export async function POST(request: NextRequest) {
           role: 'user',
           content: [
             { type: 'text', text: prompt },
-            ...imageInputs,
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:application/pdf;base64,${pdfBase64}`,
+              },
+            },
           ],
         },
       ],
@@ -205,11 +193,8 @@ export async function POST(request: NextRequest) {
       fileName: attachment.filename,
       fileType: attachment.type,
       fileSize: fileBuffer.byteLength,
-      pageCount: pngBuffers.length,
       textLength: extractedText.length,
-      renderTimeMs: renderTime,
       ocrTimeMs: ocrTime,
-      totalTimeMs: renderTime + ocrTime,
       message: 'OCR completed successfully'
     });
 
