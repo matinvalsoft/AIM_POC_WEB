@@ -100,7 +100,7 @@ export async function processPOMatching(
         // Update VendId from matchPayload vendor if available
         const vendorId = matchPayload?.vendor?.vendorId;
         if (vendorId) {
-          updateFields['VendId'] = vendorId;
+          updateFields[FIELD_NAMES.INVOICES.VENDID] = vendorId;
           console.log(`   📝 Updating VendId to: ${vendorId}`);
         }
         
@@ -110,32 +110,32 @@ export async function processPOMatching(
         
         if (!hasMatches) {
           // No matches at all - set to Error status with NO_MATCH error code
-          updateFields['Status'] = 'Error';
-          updateFields['ErrorCode'] = 'NO_MATCH';
+          updateFields[FIELD_NAMES.INVOICES.STATUS] = 'Error';
+          updateFields[FIELD_NAMES.INVOICES.ERRORCODE] = 'NO_MATCH';
           console.log('   ⚠️  No matches found - setting Status to Error with ErrorCode NO_MATCH');
         } else {
           // At least one match exists - set to Matched (even if there's also an error)
-          updateFields['Status'] = 'Matched';
+          updateFields[FIELD_NAMES.INVOICES.STATUS] = 'Matched';
           console.log(`   ✅ Matches found (${detailIds.length} details) - setting Status to Matched`);
         }
         
         // Add Error Description if provided and not empty
         if (hasError) {
-          updateFields['Error-Description'] = gptResponse.error;
+          updateFields[FIELD_NAMES.INVOICES.ERROR_DESCRIPTION] = gptResponse.error;
           console.log(`   ⚠️  Error description present: ${gptResponse.error.substring(0, 100)}...`);
         }
         
         if (Object.keys(updateFields).length > 0) {
           await updateInvoiceFn(invoiceId, updateFields);
           console.log(`   ✅ Updated Invoice ${invoiceId}`);
-          if (updateFields['VendId']) {
-            console.log(`      - VendId: ${updateFields['VendId']}`);
+          if (updateFields[FIELD_NAMES.INVOICES.VENDID]) {
+            console.log(`      - VendId: ${updateFields[FIELD_NAMES.INVOICES.VENDID]}`);
           }
-          if (updateFields['Status']) {
-            console.log(`      - Status: ${updateFields['Status']}`);
+          if (updateFields[FIELD_NAMES.INVOICES.STATUS]) {
+            console.log(`      - Status: ${updateFields[FIELD_NAMES.INVOICES.STATUS]}`);
           }
-          if (updateFields['ErrorCode']) {
-            console.log(`      - ErrorCode: ${updateFields['ErrorCode']}`);
+          if (updateFields[FIELD_NAMES.INVOICES.ERRORCODE]) {
+            console.log(`      - ErrorCode: ${updateFields[FIELD_NAMES.INVOICES.ERRORCODE]}`);
           }
         }
       } catch (error) {

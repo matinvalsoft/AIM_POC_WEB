@@ -205,7 +205,7 @@ export const FIELD_NAMES = {
     ATTACHMENTS: 'Attachments',
     RAW_TEXT: 'Raw-Text',
     ERROR_CODE: 'Error-Code',
-    ERROR_DESCRIPTION: 'Error-Description',
+    ERROR_DESCRIPTION: 'Error Description',
     ERROR_LINK: 'Error-Link',
     CREATED_AT: 'CreatedAt',
     MODIFIED_AT: 'ModifiedAt',
@@ -240,7 +240,7 @@ export const FIELD_NAMES = {
     POINVOICEHEADERS: 'POInvoiceHeaders',
     HEADERS_SUM: 'Headers-Sum',
     LINE_ITEMS: 'Line-Items',
-    ERROR_DESCRIPTION: 'Error-Description',
+    ERROR_DESCRIPTION: 'Error Description',
     STATUS_MODIFIED_TIME: 'Status-Modified-Time',
   },
   POINVOICEHEADERS: {
