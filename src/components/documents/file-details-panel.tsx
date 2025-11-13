@@ -29,10 +29,12 @@ interface FileDetailsPanelProps {
 }
 
 // Reprocess Modal Component
-const ReprocessModal = ({ file, onConfirm, isDisabled }: { 
+const ReprocessModal = ({ file, onConfirm, isDisabled, color = "primary", className }: { 
     file: AirtableFile; 
     onConfirm: (file: AirtableFile, instructions?: string) => void;
     isDisabled?: boolean;
+    color?: "primary" | "secondary";
+    className?: string;
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [instructions, setInstructions] = useState('');
@@ -51,9 +53,9 @@ const ReprocessModal = ({ file, onConfirm, isDisabled }: {
     return (
         <AriaDialogTrigger isOpen={isOpen} onOpenChange={setIsOpen}>
             <Button
-                color="primary"
+                color={color}
                 size="sm"
-                className="flex-1"
+                className={className}
                 isDisabled={isDisabled}
                 onClick={() => setIsOpen(true)}
             >
@@ -73,7 +75,7 @@ const ReprocessModal = ({ file, onConfirm, isDisabled }: {
                                 </div>
                                 <div className="z-10 flex flex-col gap-0.5">
                                     <AriaHeading slot="title" className="text-md font-semibold text-primary">
-                                        Delete {file.name}
+                                        Reprocess {file.name}
                                     </AriaHeading>
                                     <p className="text-sm text-tertiary">
                                         This will reset the file status and restart the processing workflow.
@@ -177,7 +179,7 @@ export const FileDetailsPanel = ({
 
 
     // Status display helpers
-    const getStatusColor = (status: AirtableFile['status'], errorCode?: string): 'success' | 'brand' | 'warning' | 'error' | 'gray' => {
+    const getStatusColor = (status: AirtableFile['status'], errorCode?: string): 'success' | 'blue' | 'warning' | 'error' | 'gray' => {
         // If there's an error code, use its color
         if (errorCode) {
             const errorDef = getErrorCodeDefinition(errorCode);
@@ -186,7 +188,7 @@ export const FileDetailsPanel = ({
         
         switch (status) {
             case 'Processed': return 'success';
-            case 'Processing': return 'brand';
+            case 'Processing': return 'blue';
             case 'Queued': return 'warning';
             case 'Attention': return 'warning';
             default: return 'gray';
@@ -223,18 +225,20 @@ export const FileDetailsPanel = ({
 
         const isQueued = currentFile.status === 'Queued';
         const isProcessing = currentFile.status === 'Processing';
+        const isProcessed = currentFile.status === 'Processed';
 
         // Processing state: only show Delete button with destructive warning
         if (isProcessing) {
             return (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full">
                     <DialogTrigger>
-                        <ButtonUtility 
+                        <Button 
                             size="sm" 
-                            color="error"
-                            icon={Trash01}
-                            tooltip="Delete processing file"
-                        />
+                            color="secondary"
+                            className="flex-1"
+                        >
+                            Delete
+                        </Button>
                         <ModalOverlay isDismissable>
                             <Modal>
                                 <Dialog>
@@ -273,12 +277,61 @@ export const FileDetailsPanel = ({
             );
         }
 
+        // Processed state: show View Invoice (primary), Reprocess (secondary), Delete (utility)
+        if (isProcessed) {
+            const linkedInvoice = invoices && invoices.length > 0 ? invoices[0] : null;
+            
+            return (
+                <div className="flex items-center gap-2 w-full">
+                    {linkedInvoice ? (
+                        <Button 
+                            size="sm" 
+                            color="primary"
+                            className="flex-1"
+                            onClick={() => {
+                                window.location.href = `/invoices?id=${linkedInvoice.id}`;
+                            }}
+                        >
+                            View Invoice
+                        </Button>
+                    ) : (
+                        <Button 
+                            size="sm" 
+                            color="primary"
+                            className="flex-1"
+                            isDisabled={true}
+                        >
+                            View Invoice
+                        </Button>
+                    )}
+                    
+                    <ReprocessModal 
+                        file={currentFile} 
+                        onConfirm={(file, instructions) => onReprocess?.(file, instructions)}
+                        isDisabled={false}
+                        color="secondary"
+                        className="flex-1"
+                    />
+                    
+                    <ButtonUtility 
+                        size="sm" 
+                        color="secondary"
+                        icon={Trash01}
+                        onClick={() => onDelete?.(currentFile)}
+                        tooltip="Delete file"
+                    />
+                </div>
+            );
+        }
+
         return (
             <div className="flex items-center gap-2">
                 <ReprocessModal 
                     file={currentFile} 
                     onConfirm={(file, instructions) => onReprocess?.(file, instructions)}
                     isDisabled={isQueued}
+                    color="primary"
+                    className="flex-1"
                 />
                 
                 <ButtonUtility 
@@ -375,6 +428,21 @@ export const FileDetailsPanel = ({
                                 )}
                             </p>
                         )}
+                    </div>
+                )}
+
+                {/* Processing state indicator */}
+                {currentFile?.status === 'Processing' && (
+                    <div className="rounded-lg border p-3 mb-4 border-blue-200 bg-blue-50 text-blue-700">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                            <span className="text-sm font-medium">
+                                Processing File
+                            </span>
+                        </div>
+                        <p className="text-xs">
+                            Your file is processing. All fields are read-only.
+                        </p>
                     </div>
                 )}
                 

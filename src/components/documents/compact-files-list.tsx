@@ -28,7 +28,7 @@ interface CompactFilesListProps {
 const FileItem = ({ value, className, ...otherProps }: ListBoxItemProps<AirtableFile>) => {
     if (!value) return null;
 
-    const getStatusColor = (status: AirtableFile['status'], errorCode?: string): 'success' | 'warning' | 'error' | 'gray' => {
+    const getStatusColor = (status: AirtableFile['status'], errorCode?: string): 'success' | 'warning' | 'error' | 'gray' | 'blue' => {
         // If there's an error code, use its color
         if (errorCode) {
             const errorDef = getErrorCodeDefinition(errorCode);
@@ -37,7 +37,7 @@ const FileItem = ({ value, className, ...otherProps }: ListBoxItemProps<Airtable
         
         switch (status) {
             case 'Processed': return 'success';
-            case 'Processing': return 'warning';
+            case 'Processing': return 'blue';
             case 'Queued': return 'gray';
             case 'Attention': return 'warning';
             default: return 'gray';
