@@ -251,44 +251,7 @@ export async function POST(request: NextRequest) {
 
     const updateResult = await updateResponse.json();
     console.log(`✅ [${requestId}] OCR3: Record updated successfully (status remains "Processing")`);
-
-    // Step: Trigger parser3 to create invoice and update status to "Processed"
-    console.log(`🔄 [${requestId}] OCR3: Triggering parser3 to create invoice...`);
-    try {
-      // Determine base URL for internal API calls
-      const baseUrl = process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}`
-        : (process.env.NEXTAUTH_URL || 'http://localhost:3000');
-      
-      const parser3Endpoint = `${baseUrl}/api/parser3`;
-      console.log(`📍 [${requestId}] OCR3: parser3 endpoint:`, parser3Endpoint);
-      
-      const parser3Response = await fetch(parser3Endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recordID: recordId,
-          rawText: extractedText
-        }),
-      });
-
-      if (!parser3Response.ok) {
-        const errorText = await parser3Response.text();
-        console.error(`❌ [${requestId}] OCR3: parser3 failed:`, parser3Response.status, errorText);
-        // Don't fail the whole request - OCR was successful
-        console.warn(`⚠️ [${requestId}] OCR3: Invoice creation failed, file remains in Processing state`);
-      } else {
-        const parser3Result = await parser3Response.json();
-        console.log(`✅ [${requestId}] OCR3: Invoice created successfully:`, parser3Result.invoiceRecordId);
-        console.log(`✅ [${requestId}] OCR3: File status updated to "Processed"`);
-      }
-    } catch (parser3Error) {
-      console.error(`❌ [${requestId}] OCR3: Error calling parser3:`, parser3Error);
-      // Don't fail the whole request - OCR was successful
-      console.warn(`⚠️ [${requestId}] OCR3: Invoice creation failed, file remains in Processing state`);
-    }
+    console.log(`📋 [${requestId}] OCR3: Raw text saved. Airtable automation will handle invoice parsing.`);
 
     // Return success
     return NextResponse.json({
